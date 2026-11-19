@@ -100,7 +100,7 @@ input.fz-vol::-moz-range-thumb{width:16px;height:16px;border-radius:50%;backgrou
 @media (prefers-reduced-motion:reduce){.fz *{animation:none!important;transition:none!important}}
 @media (max-width:820px){
   .fz-card{grid-template-columns:1fr;border-radius:28px;text-align:center}
-  .fz-right{order:-1}.fz-art{width:min(62vw,260px)}
+  .fz-art{width:min(48vw,210px)}
   .fz-caption{font-size:24px}
   .fz-bar,.fz-task{margin-left:auto;margin-right:auto}
   .fz-ctrl,.fz-dots{justify-content:center}
@@ -108,4 +108,63 @@ input.fz-vol::-moz-range-thumb{width:16px;height:16px;border-radius:50%;backgrou
   .fz-vol{display:none}
   .fz-top{gap:6px}.fz-chip{padding:7px 11px}.fz-sound{padding:3px 6px 3px 4px}.fz-sound select{max-width:130px}
   .fz-top .lbl{display:none}
+}
+
+/* ===== Clocks, tabs, setup ===== */
+.fz-tabs{display:inline-flex;gap:4px;background:var(--fz-chip);border:1px solid var(--fz-line);border-radius:999px;padding:4px;margin-bottom:6px}
+.fz-tabs button{border:0;background:none;color:var(--fz-muted);font-weight:700;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer;font-family:inherit}
+.fz-tabs button.on{background:var(--fz-card-solid);color:var(--fz-ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.fz-clock{cursor:pointer;margin:16px 0 4px;-webkit-tap-highlight-color:transparent}
+.ck-ring,.ck-classic,.ck-alarm{position:relative;width:min(100%,320px)}
+.ck-ring svg,.ck-classic svg,.ck-alarm svg{display:block;width:100%;height:auto}
+.ck-arc{transition:stroke-dashoffset 1s linear}
+.ck-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ck-ring .ck-t{font-size:clamp(52px,7vw,76px);font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
+.ck-ring .ck-sub{margin-top:8px;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--fz-muted)}
+.ck-digital .fz-time{margin:10px 0 22px}
+.ck-small{text-align:center;margin-top:8px;font-weight:700;font-variant-numeric:tabular-nums;font-size:20px}
+.ck-small .ck-sub{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--fz-muted);margin-left:6px}
+.ck-alarm .sd path{fill:#ff8a5c;opacity:.07;transition:opacity .15s}.ck-alarm .sd path.on{opacity:1}
+.ck-alarm .ck-col{fill:#ff8a5c;opacity:.12}.ck-alarm .ck-col.on{opacity:1}
+.ck-alarm .ck-led{fill:#5c5552}.ck-alarm[data-run="1"] .ck-led{fill:#7bd88f}
+.ck-alarm[data-run="1"] .ck-bells{animation:none}
+.fz-root-done .ck-alarm .ck-bells{animation:ckring .12s linear 12}
+@keyframes ckring{25%{transform:rotate(-3deg)}75%{transform:rotate(3deg)}}
+.ck-bells{transform-origin:150px 60px}
+.fz-setup{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:22px;max-width:560px}
+.fz-step{background:var(--fz-chip);border:1px solid var(--fz-line);border-radius:16px;padding:10px 10px 8px;text-align:center}
+.fz-step small{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fz-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fz-step span{font-size:11.5px;color:var(--fz-muted)}
+.fz-stepper{display:flex;align-items:center;justify-content:space-between;gap:4px;margin:4px 0 0}
+.fz-stepper b{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.fz-stepper button{width:30px;height:30px;border-radius:50%;border:1px solid var(--fz-line);background:var(--fz-card-solid);color:var(--fz-ink);font-size:18px;line-height:1;cursor:pointer;font-family:inherit}
+.fz-quick{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;max-width:560px}
+.fz-quick small{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fz-muted);margin-right:4px}
+.fz-quick button{border:1px solid var(--fz-line);background:none;color:var(--fz-ink);border-radius:999px;padding:5px 11px;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit}
+.fz-quick button.on{background:var(--fz-accent);color:var(--fz-on-accent);border-color:transparent}
+.fz-dots span{line-height:1.3}
+.fz-clocks{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.fz-ckopt{border:2px solid #ebe5dc;background:#fff;border-radius:16px;padding:10px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:600;font-size:12.5px;color:#3d3631;font-family:inherit}
+.fz-ckopt svg{width:42px;height:42px}
+.fz-ckopt.on{border-color:#3d3631}
+.fz-presets{display:flex;flex-direction:column;gap:6px}
+.fz-preset{display:flex;align-items:center;gap:6px;background:#f6f3ee;border:1px solid #ebe5dc;border-radius:14px}
+.fz-preset button{background:none;border:0;cursor:pointer;color:#3d3631;font-family:inherit}
+.fz-preset button:first-child{flex:1;text-align:left;padding:10px 12px}
+.fz-preset b{display:block;font-size:14px}.fz-preset small{color:#958a80;font-size:12px}
+.fz-preset .x{font-size:20px;padding:0 14px;color:#958a80}
+.fz-choice{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.fz-choice button{border:1px solid #e3ddd4;background:#f6f3ee;border-radius:18px;padding:16px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:3px;color:#3d3631;font-family:inherit}
+.fz-choice button:hover{border-color:#3d3631}
+.fz-choice span{font-size:24px}.fz-choice b{font-size:15px}.fz-choice small{color:#958a80}
+.fz-link{background:none;border:0;color:#958a80;text-decoration:underline;cursor:pointer;font-family:inherit;font-size:13.5px}
+.fz-panel .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.fz-panel .field label{font-size:13px;font-weight:600}
+.fz-panel .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:820px){
+  .fz-clock{display:flex;justify-content:center}.ck-ring,.ck-classic,.ck-alarm{width:min(78vw,300px)}
+  .fz-setup{grid-template-columns:repeat(2,1fr);margin-left:auto;margin-right:auto}
+  .fz-quick{justify-content:center;margin-left:auto;margin-right:auto}
+  .fz-tabs button{padding:7px 10px;font-size:12.5px}
+  .fz-clocks{grid-template-columns:repeat(2,1fr)}
 }
