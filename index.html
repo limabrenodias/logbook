@@ -11,10 +11,11 @@
 <link rel="manifest" href="manifest.webmanifest">
 <title>Logbook</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@500;700;800&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<link rel="stylesheet" href="focus.css">
 <style>
-:root{
+:root,:root[data-theme="night"]{
   color-scheme:dark;
   --bg:#111110;--surface-1:#1a1a19;--surface-2:#232321;--surface-3:#2d2d2a;--border:#34342f;
   --text-primary:#f0efec;--text-secondary:#c3c2b7;--text-muted:#8d8c83;
@@ -23,23 +24,45 @@
   --h0:#2d2d2a;--h1:#184f95;--h2:#256abf;--h3:#3987e5;--h4:#6da7ec;--h5:#b7d3f6;
   --series-1:#3987e5;
 }
-@media (prefers-color-scheme: light){
-  :root:where(:not([data-theme="dark"])){
-    color-scheme:light;
-    --bg:#f4f4f2;--surface-1:#fcfcfb;--surface-2:#f0efec;--surface-3:#e4e3df;--border:#dddcd6;
-    --text-primary:#0b0b0b;--text-secondary:#52514e;--text-muted:#7b7a74;
-    --accent:#2a78d6;--accent-soft:rgba(42,120,214,.12);--danger:#c93a39;--good:#008300;
-    --h0:#e4e3df;--h1:#cde2fb;--h2:#9ec5f4;--h3:#5598e7;--h4:#256abf;--h5:#104281;
-    --series-1:#2a78d6;
-  }
-}
-:root[data-theme="light"]{
+:root[data-theme="daylight"]{
   color-scheme:light;
   --bg:#f4f4f2;--surface-1:#fcfcfb;--surface-2:#f0efec;--surface-3:#e4e3df;--border:#dddcd6;
   --text-primary:#0b0b0b;--text-secondary:#52514e;--text-muted:#7b7a74;
-  --accent:#2a78d6;--accent-soft:rgba(42,120,214,.12);--danger:#c93a39;--good:#008300;
+  --accent:#2a78d6;--accent-ink:#ffffff;--accent-soft:rgba(42,120,214,.12);--danger:#c93a39;--good:#008300;
   --h0:#e4e3df;--h1:#cde2fb;--h2:#9ec5f4;--h3:#5598e7;--h4:#256abf;--h5:#104281;
   --series-1:#2a78d6;
+}
+:root[data-theme="matcha"]{
+  color-scheme:light;
+  --bg:#efebe2;--surface-1:#faf8f3;--surface-2:#f1ede4;--surface-3:#e6e0d3;--border:#e0d9ca;
+  --text-primary:#3c3832;--text-secondary:#6b6357;--text-muted:#958b7c;
+  --accent:#6d8a4f;--accent-ink:#ffffff;--accent-soft:rgba(109,138,79,.15);--danger:#b4594b;--good:#5d8a3a;
+  --h0:#e6e0d3;--h1:#d3e0c1;--h2:#afc791;--h3:#8aab66;--h4:#668945;--h5:#46652b;
+  --series-1:#6d8a4f;
+}
+:root[data-theme="dusk"]{
+  color-scheme:dark;
+  --bg:#1a1624;--surface-1:#221d30;--surface-2:#2b253c;--surface-3:#362f4b;--border:#3b3452;
+  --text-primary:#f2edf8;--text-secondary:#c9bfd8;--text-muted:#968ba9;
+  --accent:#a68cf0;--accent-ink:#1a1624;--accent-soft:rgba(166,140,240,.18);--danger:#ee7f8f;--good:#7fcf8f;
+  --h0:#362f4b;--h1:#45367a;--h2:#5f4aa8;--h3:#8166d6;--h4:#a68cf0;--h5:#d3c4ff;
+  --series-1:#a68cf0;
+}
+:root[data-theme="ocean"]{
+  color-scheme:dark;
+  --bg:#0d191e;--surface-1:#12232a;--surface-2:#182e36;--surface-3:#203a43;--border:#26424c;
+  --text-primary:#e8f3f4;--text-secondary:#b3cbcf;--text-muted:#7b989e;
+  --accent:#4fb3bf;--accent-ink:#0d191e;--accent-soft:rgba(79,179,191,.16);--danger:#ef8a7f;--good:#6fcf97;
+  --h0:#203a43;--h1:#164f59;--h2:#1f7280;--h3:#2f97a5;--h4:#5bbcc7;--h5:#a9e2e8;
+  --series-1:#4fb3bf;
+}
+:root[data-theme="sakura"]{
+  color-scheme:light;
+  --bg:#f7efef;--surface-1:#fffafa;--surface-2:#f6eaea;--surface-3:#eedcdc;--border:#ead6d7;
+  --text-primary:#3a2e33;--text-secondary:#6d5a61;--text-muted:#9a868d;
+  --accent:#c9667f;--accent-ink:#ffffff;--accent-soft:rgba(201,102,127,.13);--danger:#b8433f;--good:#4f8a4a;
+  --h0:#eedcdc;--h1:#f4d2db;--h2:#ebaabd;--h3:#dc839c;--h4:#c25f7a;--h5:#933f58;
+  --series-1:#c9667f;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text-primary);font:15px/1.45 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
@@ -142,6 +165,17 @@ table.map input{width:100%}
 .wk div{min-width:120px}
 .delta-up{color:var(--good)} .delta-down{color:var(--danger)}
 /* mobile */
+.themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.tsw{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px;cursor:pointer;display:flex;flex-direction:column;gap:8px;align-items:flex-start;font-weight:500;font-size:13.5px}
+.tsw.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.tsw-prev{display:flex;width:100%;height:34px;border-radius:8px;overflow:hidden}
+.tsw-prev i{flex:1}
+[data-prev=night] i:nth-child(1){background:#111110}[data-prev=night] i:nth-child(2){background:#2d2d2a}[data-prev=night] i:nth-child(3){background:#3987e5}
+[data-prev=daylight] i:nth-child(1){background:#f4f4f2}[data-prev=daylight] i:nth-child(2){background:#e4e3df}[data-prev=daylight] i:nth-child(3){background:#2a78d6}
+[data-prev=matcha] i:nth-child(1){background:#efebe2}[data-prev=matcha] i:nth-child(2){background:#d3e0c1}[data-prev=matcha] i:nth-child(3){background:#6d8a4f}
+[data-prev=dusk] i:nth-child(1){background:#1a1624}[data-prev=dusk] i:nth-child(2){background:#45367a}[data-prev=dusk] i:nth-child(3){background:#a68cf0}
+[data-prev=ocean] i:nth-child(1){background:#0d191e}[data-prev=ocean] i:nth-child(2){background:#1f7280}[data-prev=ocean] i:nth-child(3){background:#4fb3bf}
+[data-prev=sakura] i:nth-child(1){background:#f7efef}[data-prev=sakura] i:nth-child(2){background:#ebaabd}[data-prev=sakura] i:nth-child(3){background:#c9667f}
 nav.bottom{display:none}
 @media (max-width:820px){
   .app{grid-template-columns:1fr}
@@ -163,6 +197,7 @@ nav.bottom{display:none}
   <nav class="side" id="sidenav"></nav>
   <main>
     <div class="mtop"><div class="brand" style="padding:0">LOG<b>BOOK</b></div><div class="row"><span id="mswitch"></span><button class="ghost" data-act="theme">Theme</button></div></div>
+    <a id="fzMini" href="#focus"></a>
     <div class="banner" id="banner"></div>
     <div id="view"></div>
   </main>
@@ -172,6 +207,9 @@ nav.bottom{display:none}
 <div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
 <div id="tip"></div>
 <div id="toast"></div>
+<script src="sound.js"></script>
+<script src="scenes.js"></script>
+<script src="focus.js"></script>
 <script>
 "use strict";
 /* ============ CONFIG ============ */
@@ -182,16 +220,20 @@ const SUPABASE_KEY="sb_publishable_VvI57sGerWzNx9HkWIExzA_w0fhKsJa";
 const LANGS=["English","Spanish","French","German","Italian","Portuguese","Polish","Dutch","Russian","Ukrainian","Czech","Slovak","Hungarian","Romanian","Bulgarian","Greek","Turkish","Swedish","Norwegian","Danish","Finnish","Icelandic","Croatian","Serbian","Slovenian","Lithuanian","Latvian","Estonian","Irish","Welsh","Catalan","Basque","Arabic","Hebrew","Persian","Hindi","Urdu","Bengali","Punjabi","Tamil","Japanese","Korean","Mandarin Chinese","Cantonese","Vietnamese","Thai","Indonesian","Malay","Tagalog","Swahili","Latin","Esperanto"];
 const BASE_TYPES=["Listening","Speaking","Writing","Reading","Grammar","Vocabulary","Pronunciation","Mixed"];
 const IMPORT_REMAP={"Rätoromanisch":"Aviation","Portuguese":"Programming"};
-const MANUAL_SRC=["manual","stopwatch","timer","polylogger"];
+const MANUAL_SRC=["manual","stopwatch","timer","polylogger","pomodoro"];
 const ICONS={
  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
  stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
  logs:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
+ focus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21c4.4 0 8-3.4 8-7.6C20 8.8 16.4 6 12 6s-8 2.8-8 7.4C4 17.6 7.6 21 12 21z"/><path d="M12 6c0-1.6.8-3 2.4-3.6M9.5 4.5C10.6 5 11.4 5.6 12 6"/></svg>',
  manage:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>',
  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
  del:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>'
 };
-const ROUTES=[["home","Home"],["stats","Stats"],["logs","Logs"],["manage","Setup"]];
+const ROUTES=[["home","Home"],["focus","Focus"],["stats","Stats"],["logs","Logs"],["manage","Setup"]];
+const THEMES=[["night","Night"],["daylight","Daylight"],["matcha","Matcha"],["dusk","Dusk"],["ocean","Ocean"],["sakura","Sakura"]];
+function curTheme(){let t=null;try{t=localStorage.getItem("lb-theme")}catch(_){}if(t==="dark")t="night";if(t==="light")t="daylight";return THEMES.some(x=>x[0]===t)?t:(matchMedia("(prefers-color-scheme: light)").matches?"daylight":"night")}
+function setTheme(t,silent){document.documentElement.dataset.theme=t;try{localStorage.setItem("lb-theme",t)}catch(_){}const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();if(!silent)render()}
 
 /* ============ state ============ */
 let sb=null;
@@ -395,20 +437,21 @@ function afterHome(){const el=$("#hm");if(el){heatmap(el,ui.hmYear,ui.hmSubj);el
 function viewStats(){
   if(!ui.statSubj)ui.statSubj=focus();const s=ui.statSubj;const c=all();
   const logs=s==="All"?c.logs:c.logs.filter(l=>l.s===s);const tot=logs.reduce((a,l)=>a+l.m,0);
-  const first=logs.length?logs[logs.length-1].d:null;const days=first?daysBetween(first,today())+1:0;
-  const rd=rangeData(s,ui.range);const rtot=rd.reduce((a,d)=>a+d.v,0);
-  const cut={"7D":ymd(addDays(new Date(),-6)),"30D":ymd(addDays(new Date(),-29)),"1Y":ymd(addDays(weekStart(new Date()),-51*7)),"ALL":"0000"}[ui.range];
-  const typ={},sub={};for(const l of logs){if(l.d<cut)continue;typ[l.t]=(typ[l.t]||0)+l.m;sub[l.s]=(sub[l.s]||0)+l.m}
+  const first=logs.length?logs[logs.length-1].d:null;
+  const rd=rangeData(s,ui.range);
+  const cut={"7D":ymd(addDays(new Date(),-6)),"30D":ymd(addDays(new Date(),-29)),"1Y":ymd(addDays(weekStart(new Date()),-51*7)),"ALL":first||today()}[ui.range];
+  const pDays=daysBetween(cut,today())+1;
+  const typ={},sub={},act=new Set();let rtot=0,rn=0;for(const l of logs){if(l.d<cut)continue;rtot+=l.m;rn++;act.add(l.d);typ[l.t]=(typ[l.t]||0)+l.m;sub[l.s]=(sub[l.s]||0)+l.m}
+  const pName={"7D":"last 7 days","30D":"last 30 days","1Y":"last 12 months","ALL":"all time"}[ui.range];
   return roNote()+`<h1>Stats</h1><p class="sub">Totals, averages and how the time splits.</p>
-  <div class="row" style="margin-bottom:14px"><select id="statSubj">${subjOptions(s,true)}</select></div>
+  <div class="row" style="margin-bottom:14px"><select id="statSubj">${subjOptions(s,true)}</select><span class="spacer"></span><div class="seg">${["7D","30D","1Y","ALL"].map(r=>`<button class="${r===ui.range?"on":""}" data-r="${r}">${r}</button>`).join("")}</div></div>
   <div class="grid g4" style="margin-bottom:16px">
-   <div class="stat"><div class="k">Total hours</div><div class="v num">${(tot/60).toFixed(2)}</div></div>
-   <div class="stat"><div class="k">Daily average</div><div class="v num">${days?(tot/60/days).toFixed(2):"0.00"}<small>h</small></div></div>
-   <div class="stat"><div class="k">Start date</div><div class="v num" style="font-size:20px;padding-top:5px">${first?parseD(first).toLocaleDateString():"—"}</div></div>
-   <div class="stat"><div class="k">Sessions</div><div class="v num">${logs.length}</div></div>
+   <div class="stat"><div class="k">Hours · ${pName}</div><div class="v num">${(rtot/60).toFixed(2)}</div><div class="d">${rn} sessions</div></div>
+   <div class="stat"><div class="k">Daily average · ${pName}</div><div class="v num">${(rtot/60/pDays).toFixed(2)}<small>h</small></div><div class="d">${dur(Math.round(rtot/pDays))} per day over ${pDays} days</div></div>
+   <div class="stat"><div class="k">Active days</div><div class="v num">${act.size}<small>/ ${pDays}</small></div><div class="d">${act.size?dur(Math.round(rtot/act.size))+" on days you studied":"—"}</div></div>
+   <div class="stat"><div class="k">All-time total</div><div class="v num">${(tot/60).toFixed(2)}<small>h</small></div><div class="d">since ${first?parseD(first).toLocaleDateString():"—"}</div></div>
   </div>
-  <div class="card"><div class="head"><div><h2>${{"7D":"Last 7 days","30D":"Last 30 days","1Y":"Last 12 months (weekly)","ALL":"All time (monthly)"}[ui.range]}</h2><p class="sub"><span class="num">${H(rtot)}</span> h in this period · ${dur(Math.round(rtot/Math.max(1,rd.length)))} per ${ui.range==="1Y"?"week":ui.range==="ALL"?"month":"day"} on average</p></div>
-   <div class="seg">${["7D","30D","1Y","ALL"].map(r=>`<button class="${r===ui.range?"on":""}" data-r="${r}">${r}</button>`).join("")}</div></div>
+  <div class="card"><div class="head"><div><h2>${{"7D":"Last 7 days","30D":"Last 30 days","1Y":"Last 12 months (weekly)","ALL":"All time (monthly)"}[ui.range]}</h2><p class="sub">${ui.range==="1Y"?dur(Math.round(rtot/52))+" per week on average":ui.range==="ALL"?dur(Math.round(rtot/Math.max(1,rd.length)))+" per month on average":"Hours per day"}</p></div></div>
    <div class="chart" id="bars"></div></div>
   <div class="grid ${s==="All"?"g2":""}">
    <div class="card"><h2>Ratio by type</h2><p class="sub">Same period as the chart.</p>${ratioBars(Object.entries(typ).sort((a,b)=>b[1]-a[1]))}</div>
@@ -435,6 +478,7 @@ function viewManage(){
   if(readOnly())return roNote()+`<h1>Setup</h1><div class="card empty-state"><p>Switch back to your own logbook to change settings.</p><button class="btn" data-act="viewMe">Back to my logbook</button></div>`;
   const subs=subjects();const pinned=settings().subjects||[];const c=all();
   return `<h1>Setup</h1><p class="sub">Subjects, sharing, connections, import and export.</p>
+  <div class="card"><h2>Appearance</h2><p class="sub">Theme for this device.</p><div class="themes">${THEMES.map(([k,n])=>`<button class="tsw ${k===curTheme()?"on":""}" data-act="setTheme" data-theme="${k}"><span class="tsw-prev" data-prev="${k}"><i></i><i></i><i></i></span>${n}</button>`).join("")}</div></div>
   <div class="card"><h2>Focus subject</h2><p class="sub">Opens first in Stats and in the add-log form.</p>
    <div class="row"><select id="focusSel">${subs.map(s=>`<option ${s===focus()?"selected":""}>${esc(s)}</option>`).join("")}</select><button class="btn" data-act="saveFocus">Save focus</button></div></div>
   <div class="card"><h2>Subjects</h2><p class="sub">Languages and anything else you track (aviation, programming…). Subjects with logs appear automatically.</p>
@@ -568,7 +612,8 @@ document.addEventListener("click",async e=>{
   if(a.dataset.deltok){if(!a.classList.contains("confirm")){a.classList.add("confirm");a.textContent="Delete?";return}const {error}=await sb.from("ingest_tokens").delete().eq("token",a.dataset.deltok);if(error)return fail(error);await loadTokens();render();toast("Connection removed");return}
   const act=a.dataset.act;
   if(act==="close")closeModal();
-  else if(act==="theme"){const cur=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");const nx=cur==="light"?"dark":"light";document.documentElement.dataset.theme=nx;try{localStorage.setItem("lb-theme",nx)}catch(_){}render()}
+  else if(act==="theme"){const i=THEMES.findIndex(t=>t[0]===curTheme());const nx=THEMES[(i+1)%THEMES.length];setTheme(nx[0]);toast("Theme: "+nx[1])}
+  else if(act==="setTheme"){setTheme(a.dataset.theme)}
   else if(act==="saveManual"){const f=readForm();if(!f)return;const m=parseInt($("#fM").value,10),d=$("#fD").value;if(!(m>0&&m<=1440)||!/^\d{4}-\d{2}-\d{2}$/.test(d))return toast("Check date and minutes (1–1440)");
     const old=modalState.entry;const en={...f,m,d,src:old?old.src:"manual"};closeModal();await saveLog(en,old);toast(old?"Log updated":`Logged ${m} min of ${en.s}`)}
   else if(act==="startClock"){const f=readForm();if(!f)return;let du=0;if(modalState.mode==="timer"){const mm=parseInt($("#fTm").value,10);if(!(mm>0))return toast("Set a duration");du=mm*60000;modalState.timerMin=mm}
@@ -645,13 +690,15 @@ async function afterLogin(){
 function render(){
   renderNav();const v=$("#view");
   if(phase==="boot"){v.innerHTML='<div class="empty-state">Loading…</div>';return}
-  if(phase!=="app"){v.innerHTML=viewAuth();renderBanner();return}
+  if(phase!=="app"){document.body.classList.remove("immersive");v.innerHTML=viewAuth();renderBanner();return}
   const r=route();
+  if(r==="focus"&&typeof Focus!=="undefined"){document.body.classList.add("immersive");Focus.render(v);return}
+  document.body.classList.remove("immersive");if(typeof Focus!=="undefined"){Focus.unmount();Focus.paint(false)}
   if(r==="manage"&&$("#importBox")&&importState&&!importState.done){renderImportBox();return}
   v.innerHTML=r==="stats"?viewStats():r==="logs"?viewLogs():r==="manage"?viewManage():viewHome();
   if(r==="home")afterHome();if(r==="stats")afterStats();if(r==="manage")renderImportBox();
 }
-try{const th=localStorage.getItem("lb-theme");if(th)document.documentElement.dataset.theme=th}catch(_){}
+setTheme(curTheme(),true);
 (async()=>{
   render();
   if(SUPABASE_URL.startsWith("__")||!window.supabase){phase="config";return render()}
