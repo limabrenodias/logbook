@@ -100,14 +100,12 @@ const Scenes=(()=>{
     pal:{bg:"radial-gradient(110% 90% at 60% 30%,#4a2f20 0%,#2b1c15 60%,#1f140f 100%)",card:"rgba(255,235,215,.06)",ink:"#f6e6d6",muted:"#bd9f88",accent:"#f0a35e",chip:"rgba(255,235,215,.08)",line:"rgba(255,235,215,.08)"},
     art(){return frame(`<rect width="360" height="360" fill="#2a1b14"/><circle class="fz-glow" cx="130" cy="150" r="150" fill="url(#cglow)"/>
         <rect x="0" y="262" width="360" height="98" fill="#3c2619"/><rect x="0" y="262" width="360" height="4" fill="#5a3a26"/>
-        <ellipse cx="130" cy="262" rx="38" ry="7" fill="#1d120c" opacity=".6"/><rect x="104" y="176" width="52" height="88" rx="8" fill="#f2e2cc"/><path d="M104 186 q26 10 52 0" stroke="#e3cdb1" stroke-width="3" fill="none"/>
-        <line x1="130" y1="176" x2="130" y2="164" stroke="#3a2a20" stroke-width="2.5"/>
-        <g class="fz-flicker"><path d="M130 116 C 146 140 144 160 130 166 C 116 160 114 140 130 116Z" fill="url(#flame)"/><path d="M130 136 C 137 148 136 158 130 162 C 124 158 123 148 130 136Z" fill="#fff6d8"/></g>
+        ${Candle.svg(130,264,170,46)}
         <g><rect x="214" y="206" width="70" height="58" rx="12" fill="#c87a58"/><path d="M284 220 q24 2 22 20 q-2 16 -22 16" stroke="#c87a58" stroke-width="9" fill="none"/>
         <path class="fz-steam" d="M236 196 q-10 -16 0 -30 q10 -14 0 -30" stroke="#f6e6d6" stroke-width="3" fill="none" opacity=".5" stroke-linecap="round"/>
         <path class="fz-steam d2" d="M258 196 q-10 -16 0 -30 q10 -14 0 -30" stroke="#f6e6d6" stroke-width="3" fill="none" opacity=".5" stroke-linecap="round"/></g>`,
         `<radialGradient id="cglow"><stop offset="0" stop-color="#ffb46b" stop-opacity=".45"/><stop offset="1" stop-color="#ffb46b" stop-opacity="0"/></radialGradient>
-         <linearGradient id="flame" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe08a"/><stop offset="1" stop-color="#ff8a3d"/></linearGradient>`)}};
+         ${Candle.defs}`)}};
 
   return S;
 })();

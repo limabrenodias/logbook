@@ -17,10 +17,12 @@ const Focus=(()=>{
     full:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
     back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>',
     x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    imm:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 15l5-4 4 3 3-2 6 4"/></svg>',
+    clean:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M12 5v14"/></svg>',
     next:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l7 6-7 6M17 6v12"/></svg>'};
 
   const DEF={scene:"matcha",timer:"classic",custom:{f:30,s:5,l:15,r:4},ambient:null,bell:null,breakBell:null,vol:.6,muted:false,
-    autoBreak:true,autoFocus:false,autoLog:false,notify:false,awake:true,task:null,clock:"ring",presets:[]};
+    autoBreak:true,autoFocus:false,autoLog:false,notify:false,awake:true,task:null,clock:"ring",presets:[],layout:"clean"};
   let cfg=load(),st=cfg._st||fresh("focus",1);delete cfg._st;
   let sheet=null,pending=null,wake=null,lastP=-1,mounted=false;
 
@@ -42,33 +44,39 @@ const Focus=(()=>{
   function idle(){return !st.running&&elapsed()<1000}
 
   /* ---------- timer control ---------- */
-  function start(){
+  function start(manual=true){
     if(st.remain<=0)st.remain=total();
+    const first=!st.startedAt;
     Sound.ensure();Sound.setVolume(cfg.muted?0:cfg.vol);if(Sound.ambient!==ambient()||!amPlaying)Sound.setAmbient(ambient());amPlaying=true;
-    st.running=true;st.endAt=Date.now()+st.remain;if(!st.startedAt)st.startedAt=Date.now();save();keepAwake(true);paint(true);
+    st.running=true;st.endAt=Date.now()+st.remain;if(!st.startedAt)st.startedAt=Date.now();
+    if(st.phase==="focus"){if(first)Points.begin(st,manual);else{if(manual)Points.confirm(st);Points.resume(st)}}
+    save();keepAwake(true);paint(true);
   }
   let amPlaying=false;
-  function pause(){st.remain=remaining();st.running=false;save();Sound.stopAmbient();amPlaying=false;keepAwake(false);paint(true)}
-  function reset(){st=fresh(st.phase,st.round);save();if(amPlaying){Sound.stopAmbient();amPlaying=false}keepAwake(false);paint(true)}
+  function pause(){Points.pause(st);st.remain=remaining();st.running=false;save();Sound.stopAmbient();amPlaying=false;keepAwake(false);paint(true)}
+  function reset(){if(st.phase==="focus"&&st.startedAt)partial();st=fresh(st.phase,st.round);save();if(amPlaying){Sound.stopAmbient();amPlaying=false}keepAwake(false);paint(true)}
   function advance(auto){
     const t=T();const was=st.phase;
     if(was==="focus")st=fresh(st.round%t.r===0?"long":"short",st.round);
     else st=fresh("focus",was==="long"?1:st.round+1);
     save();
-    if(auto){start()}else{if(amPlaying&&st.phase!=="focus"){} paint(true)}
+    if(auto){start(false)}else paint(true);
   }
   function complete(){
     const was=st.phase;const started=st.startedAt||Date.now()-total();
     const rt=document.getElementById("fzRoot");if(rt){rt.classList.add("fz-root-done");setTimeout(()=>rt.classList.remove("fz-root-done"),2500)}
     if(was==="focus"){const m=mins("focus");Sound.play(bell());notify("Focus session complete","Time for a gentle break 🍵");
-      if(cfg.autoLog)doLog(m,started,task());
+      const t0=T();const award=Points.finish(st,true,m,st.round%t0.r===0?t0.l:t0.s);lastAward=award;
+      if(cfg.autoLog)doLog(m,started,task(),award);else if(award)toast(`+${award.total} focus points ✨`);
       advance(cfg.autoBreak);if(!cfg.autoBreak){Sound.stopAmbient();amPlaying=false;keepAwake(false)}
-      if(!(cfg.autoLog&&cfg.autoBreak)){pending={m,d:ymd(new Date(started)),logged:cfg.autoLog,done:true};sheet="done";if(mounted)renderSheet()}}
+      if(!(cfg.autoLog&&cfg.autoBreak)){pending={m,d:ymd(new Date(started)),logged:cfg.autoLog,done:true,award};sheet="done";if(mounted)renderSheet()}}
     else{Sound.play(breakBell());notify("Break's over","Ready when you are 🌿");advance(cfg.autoFocus);if(!cfg.autoFocus){Sound.stopAmbient();amPlaying=false;keepAwake(false)}}
   }
+  function partial(){if(st.phase==="focus"&&st.startedAt){const a=Points.finish(st,false,mins("focus"),0);if(a)toast(`+${a.total} focus points for the time you put in`)}}
   function switchPhase(ph){
     if(ph===st.phase&&idle())return;
-    if(st.phase==="focus"){const m=Math.round(elapsed()/60000);if(m>=1)askLog(m,st.startedAt||Date.now())}
+    if(st.phase==="focus"){partial();const m=Math.round(elapsed()/60000);if(m>=1)askLog(m,st.startedAt||Date.now())}
+    else if(ph==="focus")Points.skipBreak();
     const round=ph==="focus"?(st.phase==="long"?1:st.phase==="short"?st.round+1:st.round):st.round;
     st=fresh(ph,round);save();if(amPlaying){Sound.stopAmbient();amPlaying=false}keepAwake(false);refresh();
   }
@@ -86,7 +94,7 @@ const Focus=(()=>{
   function doneChoice(choice){
     if(pending&&!pending.logged){const t=readLogForm();if(!t)return;doLog(t.m,pending.d,t)}
     pending=null;sheet=null;
-    if(choice==="focus"){st=fresh("focus",st.phase==="long"?1:st.phase==="focus"?st.round:st.round+1);save();start()}
+    if(choice==="focus"){Points.skipBreak();st=fresh("focus",st.phase==="long"?1:st.phase==="focus"?st.round:st.round+1);save();start(true)}
     else if(choice==="break"&&!st.running)start();
     rerender();
   }
@@ -94,20 +102,21 @@ const Focus=(()=>{
     const m=parseInt(document.getElementById("fzlM").value,10);if(!(m>0&&m<=1440)){toast("Check the minutes");return null}
     if(document.getElementById("fzlAuto").checked)cfg.autoLog=true;cfg.task={s:t.s,t:t.t,a:t.a};save();return {...t,m}}
   function next(){
-    if(st.phase==="focus"){const m=Math.round(elapsed()/60000);if(m>=1)askLog(m,st.startedAt||Date.now())}
+    if(st.phase==="focus"){partial();const m=Math.round(elapsed()/60000);if(m>=1)askLog(m,st.startedAt||Date.now())}else Points.skipBreak();
     advance(st.running&&(st.phase==="focus"?cfg.autoBreak:cfg.autoFocus));
   }
   function end(){
-    if(st.phase==="focus"){const m=Math.round(elapsed()/60000);if(m>=1)askLog(m,st.startedAt||Date.now())}
+    if(st.phase==="focus"){partial();const m=Math.round(elapsed()/60000);if(m>=1)askLog(m,st.startedAt||Date.now())}else Points.abandon();
     st=fresh("focus",1);save();Sound.stopAmbient();amPlaying=false;keepAwake(false);paint(true);
   }
 
   /* ---------- logging ---------- */
   function handleLog(m,started){if(cfg.autoLog)doLog(m,started,task());else askLog(m,started)}
   function askLog(m,started){pending={m,d:ymd(new Date(started))};sheet="log";if(mounted)renderSheet()}
-  function doLog(m,started,t){
+  let lastAward=null;
+  function doLog(m,started,t,award){
     if(typeof readOnly==="function"&&readOnly()){toast("Switch to your own logbook to save sessions");return}
-    saveLog({a:t.a,s:t.s,t:t.t,m,d:typeof started==="string"?started:ymd(new Date(started)),src:"pomodoro"});toast(`Logged ${m} min of ${t.s} 🌿`);
+    saveLog({a:t.a,s:t.s,t:t.t,m,d:typeof started==="string"?started:ymd(new Date(started)),src:"pomodoro"});toast(`Logged ${m} min of ${t.s} 🌿${award?` · +${award.total} points`:""}`);
   }
 
   /* ---------- extras ---------- */
@@ -116,23 +125,47 @@ const Focus=(()=>{
   function notify(title,body){try{if(cfg.notify&&"Notification" in window&&Notification.permission==="granted"&&document.hidden)new Notification(title,{body,icon:"icon.png",silent:true})}catch(_){}}
 
   /* ---------- rendering ---------- */
+  function imm(){return cfg.layout==="immersive"}
   function vars(){const p=scene().pal;const light=scene().light;
+    if(imm()){const d=(scene().imm||{dark:!light}).dark;
+      return d?`--fz-bg:${p.bg};--fz-card:transparent;--fz-ink:#fff;--fz-muted:rgba(255,255,255,.78);--fz-accent:#fff;--fz-chip:rgba(255,255,255,.14);--fz-line:rgba(255,255,255,.3);--fz-on-accent:#1a1a1a;--fz-face:rgba(255,255,255,.08);--fz-card-solid:rgba(255,255,255,.24)`
+              :`--fz-bg:${p.bg};--fz-card:transparent;--fz-ink:${p.ink};--fz-muted:${p.muted};--fz-accent:${p.accent};--fz-chip:rgba(255,255,255,.5);--fz-line:rgba(0,0,0,.12);--fz-on-accent:#fff;--fz-face:rgba(255,255,255,.55);--fz-card-solid:rgba(255,255,255,.85)`}
     return `--fz-bg:${p.bg};--fz-card:${p.card};--fz-ink:${p.ink};--fz-muted:${p.muted};--fz-accent:${p.accent};--fz-chip:${p.chip};--fz-line:${p.line};--fz-on-accent:${light?"#fff":"#1a1a1a"};--fz-face:${light?"#fffdf9":"rgba(255,255,255,.07)"};--fz-card-solid:${light?"#fff":"#1c1f2a"}`}
   function quote(){const q=QUOTES[st.phase];return q[(st.round*3+(st.phase==="focus"?0:1))%q.length]}
   function upNext(){const t=T();if(st.phase==="focus")return (st.round%t.r===0?"Long break":"Break")+" • "+(st.round%t.r===0?t.l:t.s)+"m";return "Focus • "+t.f+"m"}
-  function view(){
-    const t=T(),tk=task();
-    return `<div class="fz" id="fzRoot" style="${vars()}"><div class="fz-shell">
-      <div class="fz-top">
+  function ptsChip(){const s=Points.summary();return `★ ${s.total.toLocaleString()}${s.today?`<small>+${s.today} today</small>`:""}${s.chain>1?`<small>🔥${s.chain}</small>`:""}`}
+  function topBar(){return `
         <a class="fz-chip icon" href="#home" title="Back to Logbook">${IC.back}<span class="lbl">Logbook</span></a>
         <button class="fz-chip" data-fz="settings" id="fzChip">${chipText()}</button>
         <span class="fz-sp"></span>
+        <button class="fz-chip fz-pts" data-fz="points" id="fzPts" title="Focus points">${ptsChip()}</button>
         <div class="fz-sound"><button class="fz-round" data-fz="mute" title="Mute">${cfg.muted?IC.mute:IC.vol}</button><input class="fz-vol" type="range" id="fzVol" min="0" max="1" step="0.01" value="${cfg.vol}" style="--v:${cfg.vol*100}%"><select id="fzAmb" title="Ambient sound">${Sound.AMBIENTS.map(([k,n])=>`<option value="${k}" ${k===ambient()?"selected":""}>${n}</option>`).join("")}</select></div>
+        <button class="fz-chip icon" data-fz="layout" title="${imm()?"Clean layout":"Immersive layout"}">${imm()?IC.clean:IC.imm}</button>
         <button class="fz-chip icon" data-fz="settings" title="Settings">${IC.gear}</button>
         <button class="fz-chip icon" data-fz="full" title="Full screen">${IC.full}</button>
-        <button class="fz-chip" data-fz="end">${IC.x}<span class="lbl">End</span></button>
-      </div>
-      <div class="fz-card">
+        <button class="fz-chip" data-fz="end">${IC.x}<span class="lbl">End</span></button>`}
+  function tabsHTML(){return `<div class="fz-tabs" id="fzTabs">${["focus","short","long"].map(ph=>`<button data-fzphase="${ph}" class="${ph===st.phase?"on":""}">${TAB[ph]}</button>`).join("")}</div>`}
+  function ctrlHTML(){return `<div class="fz-ctrl"><button class="fz-btn primary" data-fz="toggle" id="fzToggle">${st.running?IC.pause+"Pause":IC.play+(elapsed()>500?"Resume":"Start")}</button>
+            <button class="fz-btn round" data-fz="reset" title="Restart this session">${IC.reset}</button>
+            <button class="fz-btn" data-fz="next">Next ${IC.next}</button></div>`}
+  function bgHTML(){const sc=scene();return sc.bg?sc.bg():`<div class="fz-bg-art">${sc.art()}</div>`}
+  function viewImm(){const tk=task(),sc=scene(),d=(sc.imm||{}).dark;
+    return `<div class="fz fz-imm ${d?"imm-dark":"imm-light"}" id="fzRoot" style="${vars()}">
+      <div class="fz-bg" id="fzBg">${bgHTML()}</div><canvas class="fz-fx" id="fzFx"></canvas><div class="fz-shade"></div>
+      <div class="fz-imm-top fz-top">${topBar()}</div>
+      <div class="fz-imm-center">${tabsHTML()}
+        <div class="fz-clock" id="fzClock" data-style="${cfg.clock}" data-fz="cycleClock" title="Tap to change the clock style">${Clocks.html(cfg.clock)}</div>
+        <p class="fz-quote" id="fzQuote">“${quote()}”</p>${ctrlHTML()}
+        <div id="fzSetup">${setupHTML()}</div>
+        <button class="fz-imm-task" data-fz="task"><small>Working on</small><span>${esc(tk.s)} · ${esc(tk.t)}${tk.a?" — "+esc(tk.a):""}</span></button>
+        <div class="fz-dots" id="fzDots">${dotsHTML()}</div></div>
+      <div class="fz-imm-foot"><span class="cap">${esc(sc.name)} · <i>${esc(sc.caption)}</i></span><span class="nx"><small>UP NEXT</small> <b id="fzNext">${upNext()}</b></span></div>
+      <div id="fzPresence"></div><div id="fzSheet"></div></div>`}
+  function view(){
+    if(imm())return viewImm();
+    const t=T(),tk=task();
+    return `<div class="fz" id="fzRoot" style="${vars()}"><div class="fz-shell">
+      <div class="fz-top">${topBar()}</div>      <div class="fz-card">
         <div class="fz-left">
           <div class="fz-tabs" id="fzTabs">${["focus","short","long"].map(ph=>`<button data-fzphase="${ph}" class="${ph===st.phase?"on":""}">${TAB[ph]}</button>`).join("")}</div>
           <div class="fz-clock" id="fzClock" data-style="${cfg.clock}" data-fz="cycleClock" title="Tap to change the clock style">${Clocks.html(cfg.clock)}</div>
@@ -146,7 +179,7 @@ const Focus=(()=>{
         </div>
         <div class="fz-right"><div class="fz-art" id="fzArt">${scene().art()}</div><div class="fz-caption">${esc(scene().caption)}</div>
           <div class="fz-next"><small>UP NEXT</small><b id="fzNext">${upNext()}</b></div></div>
-      </div></div><div id="fzSheet"></div></div>`;
+      </div></div><div id="fzPresence"></div><div id="fzSheet"></div></div>`;
   }
   function chipText(){const t=T();return `${esc(scene().name)} • ${t.f}/${t.s}`}
   function dotsHTML(){const t=T();const done=st.round-(st.phase==="focus"?1:0);return Array.from({length:t.r},(_,i)=>`<i class="${i<done?"on":""}"></i>`).join("")+`<span style="margin-left:6px">session ${Math.min(st.round,t.r)} of ${t.r} · long break after ${t.r-1} short ${t.r-1===1?"break":"breaks"}</span>`}
@@ -160,8 +193,9 @@ const Focus=(()=>{
   function render(el){
     if(typeof readOnly==="function"&&readOnly()&&typeof switchView==="function"){switchView(me);return}
     mounted=true;el.innerHTML=view();lastP=-1;paint(true);renderSheet();
+    const sc=scene();if(imm()&&sc.fx)Fx.start(sc.fx,document.getElementById("fzFx"));else Fx.stop();
   }
-  function unmount(){mounted=false}
+  function unmount(){if(mounted)Fx.stop();mounted=false}
   function paint(full){
     const r=remaining(),p=Math.min(1,Math.max(0,1-r/total()));
     const mini=document.getElementById("fzMini");
@@ -174,9 +208,18 @@ const Focus=(()=>{
       g("fzDots").innerHTML=dotsHTML();document.querySelectorAll("#fzTabs button").forEach(b=>b.classList.toggle("on",b.dataset.fzphase===st.phase))}
     if(wasIdle!==idle()){wasIdle=idle();const sp=document.getElementById("fzSetup");if(sp)sp.innerHTML=setupHTML()}
     const ck=document.getElementById("fzClock");if(ck){const inner=ck.firstElementChild;if(inner){inner.dataset.run=st.running?"1":"0";Clocks.paint(cfg.clock,inner,r,total(),LBL[st.phase])}}
-    const sc=scene();if(sc.update&&(full||Math.abs(p-lastP)>.002)){const a=document.getElementById("fzArt");if(a)sc.update(a,st.phase==="focus"?p:1-p);lastP=p}
+    const sc=scene();if(full||Math.abs(p-lastP)>.002){const ctx={phase:st.phase,started:!!st.startedAt,running:st.running,focusMin:mins("focus"),raw:p};const pp=st.phase==="focus"?p:1-p;
+      if(imm()){const b=document.getElementById("fzBg");if(b){if(sc.bgUpdate)sc.bgUpdate(b,pp,ctx);else if(!sc.bg&&sc.update)sc.update(b,pp,ctx)}}
+      else{const a=document.getElementById("fzArt");if(a&&sc.update)sc.update(a,pp,ctx)}lastP=p}
+    const pr=document.getElementById("fzPresence");if(pr){const need=Points.needsPresence(st);if(need!==(pr.dataset.on==="1")){pr.dataset.on=need?"1":"0";
+      pr.innerHTML=need?`<div class="fz-presence"><div><b>Welcome back 👋</b><span>The next session started on its own. Tap anywhere or press a key to confirm you're here — focus points count from now.</span></div></div>`:""}}
+    if(full){const pt=document.getElementById("fzPts");if(pt)pt.innerHTML=ptsChip()}
+    const rt=document.getElementById("fzRoot");if(rt&&imm()){rt.classList.toggle("calm",st.running&&!sheet&&Date.now()-lastMove>4500);rt.classList.toggle("running",!idle())}
   }
-  setInterval(()=>{if(st.running&&Date.now()>=st.endAt)complete();if(st.running||mounted)paint(false)},250);
+  let lastMove=Date.now();["pointermove","pointerdown","keydown","touchstart"].forEach(ev=>document.addEventListener(ev,()=>{lastMove=Date.now()},{passive:true}));
+  ["pointerdown","keydown"].forEach(ev=>document.addEventListener(ev,()=>{if(Points.needsPresence(st)){Points.confirm(st);save();paint(true)}},true));
+  let lastSave=0;
+  setInterval(()=>{if(st.running){Points.tick(st);if(Date.now()-lastSave>15000){lastSave=Date.now();save()}}if(st.running&&Date.now()>=st.endAt)complete();if(st.running||mounted)paint(false)},250);
 
   /* ---------- sheets ---------- */
   function pv(k){const s=Scenes[k];return `background:${s.pal.bg}`}
@@ -186,6 +229,8 @@ const Focus=(()=>{
     let h="";const t=T(),tk=task();
     if(sheet==="settings"){
       h=`<div class="row"><h3>Focus settings</h3><span class="spacer"></span><button class="fz-pbtn sec" data-fz="close">Done</button></div>
+      <h4>Layout</h4><div class="fz-layouts"><button class="fz-lay ${!imm()?"on":""}" data-fzlayout="clean"><div class="pv lay-clean"><i></i><i></i></div><b>Clean</b><small>Card with the timer and an illustration</small></button>
+        <button class="fz-lay ${imm()?"on":""}" data-fzlayout="immersive"><div class="pv lay-imm" style="${pv("alpine")}"><i></i></div><b>Immersive</b><small>Full-screen scene, big centred clock</small></button></div>
       <h4>Scene</h4><div class="fz-scenes">${Object.keys(Scenes).map(k=>`<button class="fz-sc ${k===cfg.scene?"on":""}" data-fzscene="${k}"><div class="pv" style="${pv(k)}"></div><span>${Scenes[k].name}</span></button>`).join("")}</div>
       <h4>Clock</h4><div class="fz-clocks">${Clocks.STYLES.map(([k,n])=>`<button class="fz-ckopt ${k===cfg.clock?"on":""}" data-fzclock="${k}">${Clocks.icon(k)}<span>${n}</span></button>`).join("")}</div>
       <h4>Timer</h4><div class="fz-pills">${Object.entries(TIMERS).map(([k,v])=>`<button class="fz-pill ${k===cfg.timer?"on":""}" data-fztimer="${k}">${v.n}<small>${v.f}/${v.s}</small></button>`).join("")}<button class="fz-pill ${cfg.timer==="custom"?"on":""}" data-fztimer="custom">Custom</button></div>
@@ -210,11 +255,27 @@ const Focus=(()=>{
       <div class="two"><div class="field"><label>Subject</label><select id="fztS">${list.map(s=>`<option ${s===tk.s?"selected":""}>${esc(s)}</option>`).join("")}</select></div>
       <div class="field"><label>Type</label><select id="fztT">${types().map(x=>`<option ${x===tk.t?"selected":""}>${esc(x)}</option>`).join("")}</select></div></div>
       <div class="row" style="justify-content:flex-end"><button class="fz-pbtn sec" data-fz="close">Cancel</button><button class="fz-pbtn" data-fz="saveTask">Save</button></div>`;
+    }else if(sheet==="points"){
+      const S=Points.summary();const ex=Points.score(25,25,3,30000,true);
+      h=`<div class="row"><h3>Focus points</h3><span class="spacer"></span><button class="fz-pbtn sec" data-fz="close">Close</button></div>
+      <div class="fz-ptgrid"><div><small>Today</small><b>${S.today}</b></div><div><small>Last 7 days</small><b>${S.week}</b></div><div><small>All time</small><b>${S.total.toLocaleString()}</b></div><div><small>Chain</small><b>${S.chain?"🔥 "+S.chain:"—"}</b></div></div>
+      ${S.due?`<p class="fz-due">${S.due>Date.now()?`Be back by <b>${new Date(S.due).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</b> to keep your chain and get the on-time bonus.`:`Your break ended — start within ${Math.max(0,Math.ceil((S.due+S.graceMin*60000-Date.now())/60000))} min to keep the chain.`}</p>`:""}
+      <h4>How you earn</h4><ul class="fz-rules">
+        <li><b>1 point per minute</b> of focus while the timer runs — pausing earns nothing.</li>
+        <li><b>Longer sessions</b> earn more per minute: up to ×1.4 for 65+ minute sessions.</li>
+        <li><b>Finishing</b> a session adds +20%. Ending early still pays for the minutes you did.</li>
+        <li><b>Chains</b>: each session started on time after its break adds ×0.1 (up to ×1.5), plus an on-time bonus of +5 (within 1 min), +3 (3 min) or +1 (5 min).</li>
+        <li><b>No stalling</b>: the break deadline is set when focus ends. Waiting on the start screen or pausing the break doesn't move it — more than ${S.graceMin} min late resets the chain.</li>
+        <li><b>Presence</b>: a session that starts automatically needs one tap to confirm you're there; until then it earns nothing.</li></ul>
+      <p style="color:#958a80;font-size:12.5px">Example: a finished 25-min session, 3rd in a row, back within 30 s → ${ex.base} + ${ex.comp} + ${ex.onT} = <b>${ex.total} points</b>.</p>
+      <h4>Recent sessions</h4>${S.recent.map(r=>`<div class="fz-ptrow"><span>${new Date(r.t).toLocaleString([], {weekday:"short",hour:"2-digit",minute:"2-digit"})} · ${r.min} min${r.n>1?` · 🔥${r.n}`:""}</span><b>+${r.total}</b></div>`).join("")||'<p style="color:#958a80;font-size:13px">No sessions yet — start one!</p>'}`;
     }else if(sheet==="done"&&pending){
-      const brk=st.phase!=="focus",bm=mins(st.phase),fm=mins("focus");
-      h=`<div class="fz-done"><div class="leaf">🌿</div><h3>Nicely done</h3><p>${pending.m} minute${pending.m===1?"":"s"} of focus${pending.logged?" — saved to your logbook ✓":". It'll be saved with:"}</p></div>
+      const brk=st.phase!=="focus",bm=mins(st.phase),fm=mins("focus");const aw=pending.award;
+      h=`<div class="fz-done"><div class="leaf">🌿</div><h3>Nicely done</h3><p>${pending.m} minute${pending.m===1?"":"s"} of focus${pending.logged?" — saved to your logbook ✓":". It'll be saved with:"}</p>
+        ${aw?`<div class="fz-earn"><b>+${aw.total} focus points</b><span>${aw.min} min${aw.lenM>1?` × ${aw.lenM.toFixed(2)} length`:""}${aw.chM>1?` × ${aw.chM.toFixed(1)} chain`:""}${aw.comp?` · +${aw.comp} finish`:""}${aw.onT?` · +${aw.onT} on time`:""}</span></div>`:`<div class="fz-earn none"><span>No points this time — the session wasn't confirmed as attended.</span></div>`}</div>
       ${pending.logged?"":logFields(tk)}
       <h4 style="text-align:center;margin-top:18px">What's next?</h4>
+      ${brk?`<p class="fz-due" style="text-align:center">Break until <b>${new Date(Date.now()+bm*60000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</b> — come back on time to grow your chain 🔥</p>`:""}
       <div class="fz-choice">${brk?`<button data-fzdone="break"><span>☕</span><b>${st.running?"Continue":"Take a"} ${bm}-min ${st.phase==="long"?"long ":""}break</b><small>${st.phase==="long"?"You've earned a proper rest":"Stretch, water, look away"}</small></button>`:""}
         <button data-fzdone="focus"><span>🎯</span><b>Keep focusing · ${fm} min</b><small>${brk?"Skip the break this time":"Start the next session"}</small></button></div>
       <p style="text-align:center;margin:14px 0 0"><button class="fz-link" data-fzdone="later">${pending.logged?"Decide later":"Don't save this session"}</button></p>`;
@@ -243,13 +304,16 @@ const Focus=(()=>{
     const pr=e.target.closest("[data-fzpreset]");if(pr){const p=cfg.presets[+pr.dataset.fzpreset];if(p){sheet=null;applyPreset(p)}return}
     const pd=e.target.closest("[data-fzpdel]");if(pd){cfg.presets.splice(+pd.dataset.fzpdel,1);save();renderSheet();refresh();return}
     const dn=e.target.closest("[data-fzdone]");if(dn){const c=dn.dataset.fzdone;if(c==="later"){pending=null;sheet=null;rerender()}else doneChoice(c);return}
+    const ly=e.target.closest("[data-fzlayout]");if(ly){cfg.layout=ly.dataset.fzlayout;save();rerender();sheet="settings";renderSheet();return}
     const a=e.target.closest("[data-fz]");if(!a)return;const k=a.dataset.fz;
     if(k==="scrim"&&e.target!==a)return;
-    if(k==="toggle"){st.running?pause():start()}
+    if(k==="toggle"){st.running?pause():start(true)}
     else if(k==="reset")reset();
     else if(k==="next")next();
     else if(k==="end")end();
     else if(k==="settings"){sheet="settings";renderSheet()}
+    else if(k==="points"){sheet="points";renderSheet()}
+    else if(k==="layout"){cfg.layout=imm()?"clean":"immersive";save();rerender()}
     else if(k==="task"){sheet="task";renderSheet()}
     else if(k==="close"||k==="scrim"){if(sheet==="log"||sheet==="done")return;sheet=null;renderSheet()}
     else if(k==="cycleClock"){const i=Clocks.STYLES.findIndex(c=>c[0]===cfg.clock);cfg.clock=Clocks.STYLES[(i+1)%Clocks.STYLES.length][0];save();const ck=document.getElementById("fzClock");ck.dataset.style=cfg.clock;ck.innerHTML=Clocks.html(cfg.clock);paint(true);toast("Clock: "+Clocks.STYLES.find(c=>c[0]===cfg.clock)[1])}
@@ -275,7 +339,7 @@ const Focus=(()=>{
       if(k==="notify"&&cfg.notify&&"Notification" in window&&Notification.permission==="default")Notification.requestPermission();if(k==="awake")keepAwake(cfg.awake&&st.running)}
   });
   document.addEventListener("input",e=>{if(e.target.id==="fzVol"){cfg.vol=+e.target.value;cfg.muted=false;e.target.style.setProperty("--v",cfg.vol*100+"%");Sound.setVolume(cfg.vol);save()}});
-  document.addEventListener("keydown",e=>{if(!mounted||sheet)return;if(e.code==="Space"&&!/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)){e.preventDefault();st.running?pause():start()}});
+  document.addEventListener("keydown",e=>{if(!mounted||sheet)return;if(e.code==="Space"&&!/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)){e.preventDefault();st.running?pause():start(true)}});
 
   // resume a session that was running when the page was closed/reloaded
   if(st.running&&Date.now()>=st.endAt){setTimeout(complete,1500)}
