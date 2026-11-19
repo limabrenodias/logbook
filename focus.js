@@ -22,17 +22,17 @@ const Focus=(()=>{
     cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
     next:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l7 6-7 6M17 6v12"/></svg>'};
 
-  const DEF={scene:"matcha",timer:"classic",custom:{f:30,s:5,l:15,r:4},ambient:null,bell:null,breakBell:null,vol:.6,muted:false,
+  const DEF={scene:"parasol",living:true,timer:"classic",custom:{f:30,s:5,l:15,r:4},ambient:null,bell:null,breakBell:null,vol:.6,muted:false,
     autoBreak:true,autoFocus:false,autoLog:false,notify:false,awake:true,task:null,clock:"ring",presets:[],layout:"clean"};
   let cfg=load(),st=cfg._st||fresh("focus",1);delete cfg._st;
-  let sheet=null,pending=null,wake=null,lastP=-1,mounted=false;
+  let sheet=null,pending=null,wake=null,lastP=-1,mounted=false;Scenes._living=cfg.living!==false;
 
   function load(){try{const o=JSON.parse(localStorage.getItem(LS)||"{}");return {...DEF,...o,custom:{...DEF.custom,...(o.custom||{})}}}catch(_){return {...DEF}}}
   function save(){try{localStorage.setItem(LS,JSON.stringify({...cfg,_st:st}))}catch(_){}}
   function T(){return cfg.timer==="custom"?{n:"Custom",...cfg.custom}:TIMERS[cfg.timer]||TIMERS.classic}
   function mins(ph){const t=T();return ph==="focus"?t.f:ph==="short"?t.s:t.l}
   function fresh(ph,round){return {phase:ph,round,running:false,endAt:0,remain:mins(ph)*60000,startedAt:null,segs:[]}}
-  function scene(){return Scenes[cfg.scene]||Scenes.matcha}
+  function scene(){const s=Scenes[cfg.scene];return s&&s.art?s:Scenes.parasol}
   function ambient(){return cfg.ambient||scene().ambient}
   function bell(){return cfg.bell||scene().bell}
   function breakBell(){return cfg.breakBell||scene().breakBell}
@@ -190,7 +190,7 @@ const Focus=(()=>{
         <div id="fzSetup">${setupHTML()}</div>
         <button class="fz-imm-task" data-fz="task"><small>Working on</small><span>${esc(tk.s)} · ${esc(tk.t)}${tk.a?" — "+esc(tk.a):""}</span></button>
         <div class="fz-dots" id="fzDots">${dotsHTML()}</div></div>
-      <div class="fz-imm-foot"><span class="cap">${esc(sc.name)} · <i>${esc(sc.caption)}</i></span><span class="nx"><small>UP NEXT</small> <b id="fzNext">${upNext()}</b></span></div>
+      <div class="fz-imm-foot"><span class="cap">${sc.credit?esc(sc.credit):esc(sc.name)} · <i>${esc(sc.caption)}</i></span><span class="nx"><small>UP NEXT</small> <b id="fzNext">${upNext()}</b></span></div>
       <div id="fzPresence"></div><div id="fzSheet"></div></div>`}
   function view(){
     if(imm())return viewImm();
@@ -206,7 +206,7 @@ const Focus=(()=>{
           <button class="fz-task" data-fz="task"><small>Working on</small><b>${esc(tk.s)} · ${esc(tk.t)}</b><span class="a">${tk.a?"— "+esc(tk.a):""}</span><span style="margin-left:auto">✎</span></button>
           <div class="fz-dots" id="fzDots">${dotsHTML()}</div>
         </div>
-        <div class="fz-right"><div class="fz-art" id="fzArt">${scene().art()}</div><div class="fz-caption">${esc(scene().caption)}</div>
+        <div class="fz-right"><div class="fz-art" id="fzArt">${scene().art()}</div><div class="fz-caption">${esc(scene().caption)}</div>${scene().credit?`<div class="fz-credit">${esc(scene().credit)}</div>`:""}
           <div class="fz-next"><small>UP NEXT</small><b id="fzNext">${upNext()}</b></div></div>
       </div></div><div id="fzPresence"></div><div id="fzSheet"></div></div>`;
   }
@@ -252,7 +252,8 @@ const Focus=(()=>{
   setInterval(()=>{if(st.running){Points.tick(st);if(Date.now()-lastSave>15000){lastSave=Date.now();save()}}if(st.running&&Date.now()>=st.endAt)complete();if(st.running||mounted)paint(false)},250);
 
   /* ---------- sheets ---------- */
-  function pv(k){const s=Scenes[k];return `background:${s.pal.bg}`}
+  function pv(k){return Scenes.preview?Scenes.preview(k):`background:${Scenes[k].pal.bg}`}
+  const sceneKeys=()=>Object.keys(Scenes).filter(k=>Scenes[k]&&Scenes[k].art);
   function renderSheet(){
     const host=document.getElementById("fzSheet");if(!host)return;
     if(!sheet){host.innerHTML="";return}
@@ -261,7 +262,7 @@ const Focus=(()=>{
       h=`<div class="row"><h3>Focus settings</h3><span class="spacer"></span><button class="fz-pbtn sec" data-fz="close">Done</button></div>
       <h4>Layout</h4><div class="fz-layouts"><button class="fz-lay ${!imm()?"on":""}" data-fzlayout="clean"><div class="pv lay-clean"><i></i><i></i></div><b>Clean</b><small>Card with the timer and an illustration</small></button>
         <button class="fz-lay ${imm()?"on":""}" data-fzlayout="immersive"><div class="pv lay-imm" style="${pv("alpine")}"><i></i></div><b>Immersive</b><small>Full-screen scene, big centred clock</small></button></div>
-      <h4>Scene</h4><div class="fz-scenes">${Object.keys(Scenes).map(k=>`<button class="fz-sc ${k===cfg.scene?"on":""}" data-fzscene="${k}"><div class="pv" style="${pv(k)}"></div><span>${Scenes[k].name}</span></button>`).join("")}</div>
+      ${["Paintings","Illustrations"].map(g=>`<h4>${g==="Paintings"?"Paintings <small style='text-transform:none;letter-spacing:0;font-weight:500'>· public-domain impressionist works</small>":"Illustrations"}</h4><div class="fz-scenes">${sceneKeys().filter(k=>(Scenes[k].group||"Illustrations")===g).map(k=>`<button class="fz-sc ${k===cfg.scene?"on":""}" data-fzscene="${k}"><div class="pv" style="${pv(k)}"></div><span>${Scenes[k].name}</span></button>`).join("")}</div>`).join("")}
       <h4>Clock</h4><div class="fz-clocks">${Clocks.STYLES.map(([k,n])=>`<button class="fz-ckopt ${k===cfg.clock?"on":""}" data-fzclock="${k}">${Clocks.icon(k)}<span>${n}</span></button>`).join("")}</div>
       <h4>Timer</h4><div class="fz-pills">${Object.entries(TIMERS).map(([k,v])=>`<button class="fz-pill ${k===cfg.timer?"on":""}" data-fztimer="${k}">${v.n}<small>${v.f}/${v.s}</small></button>`).join("")}<button class="fz-pill ${cfg.timer==="custom"?"on":""}" data-fztimer="custom">Custom</button></div>
       ${cfg.timer==="custom"?`<div class="fz-nums"><label>Focus (min)<input type="number" min="1" max="180" id="fzcf" value="${cfg.custom.f}"></label><label>Short break<input type="number" min="1" max="60" id="fzcs" value="${cfg.custom.s}"></label><label>Long break<input type="number" min="1" max="90" id="fzcl" value="${cfg.custom.l}"></label><label>Short breaks before long<input type="number" min="1" max="12" id="fzcx" value="${cfg.custom.r-1}"></label></div>`:`<p style="color:#958a80;font-size:13px;margin:10px 0 0">${t.f} min focus · ${t.s} min break · ${t.l} min long break after ${t.r-1} short breaks</p>`}
@@ -273,6 +274,7 @@ const Focus=(()=>{
       <div class="fz-sw"><div>End of focus<small>A gentle signal, never an alarm</small></div><div class="row"><select id="fzsBell"><option value="">Scene default (${Sound.BELLS.find(a=>a[0]===scene().bell)[1]})</option>${Sound.BELLS.map(([k,n])=>`<option value="${k}" ${k===cfg.bell?"selected":""}>${n}</option>`).join("")}</select><button class="fz-pbtn sec" data-fz="testBell">▶</button></div></div>
       <div class="fz-sw"><div>End of break</div><div class="row"><select id="fzsBreak"><option value="">Scene default (${Sound.BELLS.find(a=>a[0]===scene().breakBell)[1]})</option>${Sound.BELLS.map(([k,n])=>`<option value="${k}" ${k===cfg.breakBell?"selected":""}>${n}</option>`).join("")}</select><button class="fz-pbtn sec" data-fz="testBreak">▶</button></div></div>
       <h4>Flow</h4>
+      ${sw("living","Living paintings","Gentle motion on the paintings — rippling water, wind in the grass, a shimmering sky")}
       ${sw("autoLog","Log focus sessions automatically","Otherwise you'll get a gentle prompt to save each one")}
       ${sw("autoBreak","Start breaks automatically","")}
       ${sw("autoFocus","Start the next focus automatically","")}
@@ -397,7 +399,7 @@ const Focus=(()=>{
     else if(id==="fzsBreak"){cfg.breakBell=e.target.value||null;save()}
     else if(/^fzc[fslx]$/.test(id)){const v=parseInt(e.target.value,10);if(v>0)setTimer(id[3],v)}
     else if(e.target.dataset&&e.target.dataset.fzsw){const k=e.target.dataset.fzsw;cfg[k]=e.target.checked;save();
-      if(k==="notify"&&cfg.notify&&"Notification" in window&&Notification.permission==="default")Notification.requestPermission();if(k==="awake")keepAwake(cfg.awake&&st.running)}
+      if(k==="living"){Scenes._living=cfg.living;rerender();sheet="settings";renderSheet()}if(k==="notify"&&cfg.notify&&"Notification" in window&&Notification.permission==="default")Notification.requestPermission();if(k==="awake")keepAwake(cfg.awake&&st.running)}
   });
   document.addEventListener("input",e=>{if(e.target.id==="fzVol"){cfg.vol=+e.target.value;cfg.muted=false;e.target.style.setProperty("--v",cfg.vol*100+"%");Sound.setVolume(cfg.vol);save()}});
   document.addEventListener("keydown",e=>{if(!mounted||sheet)return;if(e.code==="Space"&&!/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)){e.preventDefault();st.running?pause():start(true)}});
