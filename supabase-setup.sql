@@ -132,3 +132,10 @@ begin
 end $$;
 revoke all on function public.ingest(text, jsonb) from public;
 grant execute on function public.ingest(text, jsonb) to anon, authenticated;
+-- ── Table permissions for signed-in users (row-level security still decides WHICH rows) ──
+grant usage on schema public to anon, authenticated;
+grant select, insert, update         on public.profiles      to authenticated;
+grant select, insert, update, delete on public.logs          to authenticated;
+grant select, insert, update, delete on public.timers        to authenticated;
+grant select, insert, delete         on public.shares        to authenticated;
+grant select, insert, delete         on public.ingest_tokens to authenticated;
