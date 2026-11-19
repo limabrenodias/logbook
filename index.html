@@ -13,7 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@500;700;800&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<link rel="stylesheet" href="focus.css?v=202611191634">
+<link rel="stylesheet" href="focus.css?v=202611191905">
+<link rel="stylesheet" href="features.css?v=202611191905">
 <style>
 :root,:root[data-theme="night"]{
   color-scheme:dark;
@@ -207,14 +208,17 @@ nav.bottom{display:none}
 <div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
 <div id="tip"></div>
 <div id="toast"></div>
-<script src="sound.js?v=202611191634"></script>
-<script src="scenes.js?v=202611191634"></script>
-<script src="backdrops.js?v=202611191634"></script>
-<script src="paintings.js?v=202611191634"></script>
-<script src="clocks.js?v=202611191634"></script>
-<script src="fx.js?v=202611191634"></script>
-<script src="points.js?v=202611191634"></script>
-<script src="focus.js?v=202611191634"></script>
+<script src="sound.js?v=202611191905"></script>
+<script src="scenes.js?v=202611191905"></script>
+<script src="backdrops.js?v=202611191905"></script>
+<script src="paintings.js?v=202611191905"></script>
+<script src="clocks.js?v=202611191905"></script>
+<script src="fx.js?v=202611191905"></script>
+<script src="points.js?v=202611191905"></script>
+<script src="focus.js?v=202611191905"></script>
+<script src="goals.js?v=202611191905"></script>
+<script src="insights.js?v=202611191905"></script>
+<script src="social.js?v=202611191905"></script>
 <script>
 "use strict";
 /* ============ CONFIG ============ */
@@ -231,11 +235,13 @@ const ICONS={
  stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
  logs:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
  focus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21c4.4 0 8-3.4 8-7.6C20 8.8 16.4 6 12 6s-8 2.8-8 7.4C4 17.6 7.6 21 12 21z"/><path d="M12 6c0-1.6.8-3 2.4-3.6M9.5 4.5C10.6 5 11.4 5.6 12 6"/></svg>',
+ insights:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>',
+ friends:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.7c.5-.1 1-.2 1.5-.2 2.5 0 4.5 1.7 4.5 4.5"/></svg>',
  manage:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>',
  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
  del:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>'
 };
-const ROUTES=[["home","Home"],["focus","Focus"],["stats","Stats"],["logs","Logs"],["manage","Setup"]];
+const ROUTES=[["insights","Insights"],["home","Home"],["focus","Focus"],["friends","Friends"],["stats","Stats"],["logs","Logs"],["manage","Setup"]];
 const THEMES=[["night","Night"],["daylight","Daylight"],["matcha","Matcha"],["dusk","Dusk"],["ocean","Ocean"],["sakura","Sakura"]];
 function curTheme(){let t=null;try{t=localStorage.getItem("lb-theme")}catch(_){}if(t==="dark")t="night";if(t==="light")t="daylight";return THEMES.some(x=>x[0]===t)?t:(matchMedia("(prefers-color-scheme: light)").matches?"daylight":"night")}
 function setTheme(t,silent){document.documentElement.dataset.theme=t;try{localStorage.setItem("lb-theme",t)}catch(_){}const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();if(!silent)render()}
@@ -301,7 +307,7 @@ function byDate(filter){
   const map={};for(const l of all().logs){if(filter&&filter!=="All"&&l.s!==filter)continue;const e=map[l.d]||(map[l.d]={m:0,s:{}});e.m+=l.m;e.s[l.s]=(e.s[l.s]||0)+l.m}
   return map;
 }
-function streak(){const map=byDate();let d=new Date();if(!map[ymd(d)])d=addDays(d,-1);let n=0;while(map[ymd(d)]){n++;d=addDays(d,-1)}return n}
+function streak(){return streakInfo().cur}
 
 /* ============ data layer ============ */
 async function loadLogs(){
@@ -332,7 +338,7 @@ async function saveLog(e,old){
   else{const tmp={...e,i:"tmp"+Math.random(),c:new Date().toISOString()};logsArr.push(tmp);invalidate();render();
     const {data,error}=await sb.from("logs").insert(row).select("id,created_at").single();
     if(error){logsArr=logsArr.filter(x=>x!==tmp);invalidate();render();return fail(error,"Couldn't save the log")}
-    tmp.i=data.id;tmp.c=data.created_at;}
+    tmp.i=data.id;tmp.c=data.created_at;return tmp;}
 }
 async function deleteLog(l){
   logsArr=logsArr.filter(x=>x.i!==l.i);invalidate();render();
@@ -419,15 +425,17 @@ function roNote(){return readOnly()?`<div class="banner on" style="border-color:
 function viewHome(){
   const c=all();const total=c.logs.reduce((a,l)=>a+l.m,0);const map=byDate();const t=map[today()];
   const ws=weekStart(new Date());let wk=0,lwk=0,wkS={};for(let i=0;i<7;i++){const e=map[ymd(addDays(ws,i))];if(e){wk+=e.m;for(const k in e.s)wkS[k]=(wkS[k]||0)+e.s[k]}const p=map[ymd(addDays(ws,i-7))];if(p)lwk+=p.m}
-  const delta=wk-lwk;const years=[...new Set(c.logs.map(l=>+l.d.slice(0,4)))];if(!years.includes(new Date().getFullYear()))years.push(new Date().getFullYear());years.sort((a,b)=>b-a);
+  const delta=wk-lwk;const si=streakInfo();const years=[...new Set(c.logs.map(l=>+l.d.slice(0,4)))];if(!years.includes(new Date().getFullYear()))years.push(new Date().getFullYear());years.sort((a,b)=>b-a);
   if(!c.logs.length)return roNote()+`<h1>Welcome aboard${readOnly()?"":", @"+esc(myProfile.username)}</h1><p class="sub">${readOnly()?"Nothing logged here yet.":"Your logbook is empty."}</p>${readOnly()?"":`<div class="card empty-state"><h2>Bring your history over</h2><p>Coming from Polylogger? Import your CSV once — re-importing never creates duplicates.</p><a class="btn" style="text-decoration:none;display:inline-block" href="#manage">Import Polylogger CSV</a><p class="muted" style="margin-top:14px">Or tap <b>+</b> to log your first session.</p></div>`}`;
   return roNote()+`<h1>Home</h1><p class="sub">${new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"})}</p>
   <div class="grid g4" style="margin-bottom:16px">
    <div class="stat"><div class="k">Hours logged</div><div class="v num">${H(total)}</div><div class="d">${c.logs.length} sessions</div></div>
-   <div class="stat"><div class="k">Streak</div><div class="v num">${streak()}<small>days</small></div><div class="d">${t?"Logged today ✓":"Log today to keep it"}</div></div>
+   <div class="stat"><div class="k">Streak</div><div class="v num">${si.cur}<small>days</small></div><div class="d">${t?"Logged today ✓":"Log today to keep it"}${si.freezes?` · ❄ ${si.freezes}`:""}</div></div>
    <div class="stat"><div class="k">Today</div><div class="v num">${t?H(t.m):"0.0"}<small>h</small></div><div class="d">${t?esc(Object.keys(t.s).join(", ")):"—"}</div></div>
    <div class="stat"><div class="k">This week</div><div class="v num">${H(wk)}<small>h</small></div><div class="d ${delta>=0?"delta-up":"delta-down"}">${delta>=0?"▲":"▼"} ${H(Math.abs(delta))} h vs last week</div></div>
   </div>
+  <div class="grid g2 home-top">${todayCard()}${Quick.card()}</div>
+  ${Goals.card()}${Social.homeCard()}
   <div class="card"><div class="head"><div><h2>Year in review</h2><p class="sub">Daily activity — hover or tap a day.</p></div>
    <div class="row"><select id="hmSubj">${subjOptions(ui.hmSubj,true)}</select><select id="hmYear">${years.map(y=>`<option ${y===ui.hmYear?"selected":""}>${y}</option>`).join("")}</select></div></div>
    <div class="hm-wrap" id="hm"></div>
@@ -484,6 +492,9 @@ function viewManage(){
   const subs=subjects();const pinned=settings().subjects||[];const c=all();
   return `<h1>Setup</h1><p class="sub">Subjects, sharing, connections, import and export.</p>
   <div class="card"><h2>Appearance</h2><p class="sub">Theme for this device.</p><div class="themes">${THEMES.map(([k,n])=>`<button class="tsw ${k===curTheme()?"on":""}" data-act="setTheme" data-theme="${k}"><span class="tsw-prev" data-prev="${k}"><i></i><i></i><i></i></span>${n}</button>`).join("")}</div></div>
+  ${consistencyCard()}
+  <div class="card"><h2>Quick logs</h2><p class="sub">Your one-tap buttons on Home (${Quick.list().length}). Recent activities are suggested when you create one.</p><button class="btn sec" data-g="quick">Manage quick logs</button></div>
+  ${Social.privacyCard()}
   <div class="card"><h2>Focus subject</h2><p class="sub">Opens first in Stats and in the add-log form.</p>
    <div class="row"><select id="focusSel">${subs.map(s=>`<option ${s===focus()?"selected":""}>${esc(s)}</option>`).join("")}</select><button class="btn" data-act="saveFocus">Save focus</button></div></div>
   <div class="card"><h2>Subjects</h2><p class="sub">Languages and anything else you track (aviation, programming…). Subjects with logs appear automatically.</p>
@@ -559,6 +570,7 @@ function openModal(entry){
   const subs=subjects();const list=[...subs,...LANGS.filter(l=>!subs.includes(l))];const cur=t&&!entry?t:{a:def.a,s:def.s,t:def.t};
   $("#modal").innerHTML=`<div class="row" style="margin-bottom:4px"><h2 style="font-size:19px">${entry?"Edit log":"Add a log"}</h2><span class="spacer"></span><button class="ib" data-act="close" aria-label="Close" style="font-size:20px">×</button></div>
   <p class="sub">${entry?"Change anything and save.":"Log your latest session."}</p>
+  ${entry||!Quick.list().length?"":`<div class="qchips mini">${Quick.list().map(q=>`<button class="qchip" data-qfill="${esc(q.id)}"><span class="qc-a">${esc(q.a||q.t)}</span><span class="qc-m">${q.m}m</span></button>`).join("")}</div>`}
   ${entry?"":`<div class="seg" id="modeSeg" style="width:100%;margin-bottom:14px">${["manual","stopwatch","timer"].map(m=>`<button style="flex:1" data-mode="${m}">${m[0].toUpperCase()+m.slice(1)}</button>`).join("")}</div>`}
   <div class="field"><label>Activity (optional)</label><input type="text" id="fA" maxlength="300" placeholder="What did you do?" value="${esc(cur.a)}"></div>
   <div class="two"><div class="field"><label>Subject</label><select id="fS">${list.map((s,i)=>`${i===subs.length&&subs.length?'<option disabled>──────────</option>':""}<option ${s===cur.s?"selected":""}>${esc(s)}</option>`).join("")}<option disabled>──────────</option><option value="__other">Other…</option></select><input type="text" id="fSo" placeholder="New subject name" maxlength="60" style="display:none"></div>
@@ -669,7 +681,7 @@ document.addEventListener("change",e=>{
 });
 let qT;document.addEventListener("input",e=>{if(e.target.id==="logQ"){ui.logQ=e.target.value;clearTimeout(qT);qT=setTimeout(()=>{render();const i=$("#logQ");if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}},250)}});
 addEventListener("hashchange",()=>{window.scrollTo(0,0);render()});
-let rT;addEventListener("resize",()=>{clearTimeout(rT);rT=setTimeout(()=>{if(phase==="app"&&route()==="stats")afterStats()},150)});
+let rT;addEventListener("resize",()=>{clearTimeout(rT);rT=setTimeout(()=>{if(phase==="app"&&route()==="stats")afterStats();if(phase==="app"&&route()==="insights")Insights.after()},150)});
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(phase!=="app")return;if(document.hidden){hiddenAt=Date.now();return}loadTimer();if(Date.now()-hiddenAt>30000)refresh()});
 setInterval(()=>{if(phase==="app"&&!document.hidden)loadTimer()},20000);
@@ -685,7 +697,7 @@ async function startApp(){
   myProfile=await loadProfile(me);viewing=me;viewProfile=myProfile;phase="app";
   $("#view").innerHTML='<div class="empty-state">Loading your logbook…</div>';
   await Promise.all([loadLogs().catch(e=>fail(e,"Couldn't load your logs")),loadShares().catch(console.error),loadTokens(),loadTimer()]);
-  render();
+  render();Social.start();
 }
 async function afterLogin(){
   const p=await loadProfile(me).catch(e=>{fail(e);return null});
@@ -700,8 +712,8 @@ function render(){
   if(r==="focus"&&typeof Focus!=="undefined"){document.body.classList.add("immersive");Focus.render(v);return}
   document.body.classList.remove("immersive");if(typeof Focus!=="undefined"){Focus.unmount();Focus.paint(false)}
   if(r==="manage"&&$("#importBox")&&importState&&!importState.done){renderImportBox();return}
-  v.innerHTML=r==="stats"?viewStats():r==="logs"?viewLogs():r==="manage"?viewManage():viewHome();
-  if(r==="home")afterHome();if(r==="stats")afterStats();if(r==="manage")renderImportBox();
+  v.innerHTML=r==="stats"?viewStats():r==="logs"?viewLogs():r==="manage"?viewManage():r==="insights"?Insights.view():r==="friends"?Social.view():viewHome();
+  if(r==="home")afterHome();if(r==="stats")afterStats();if(r==="manage")renderImportBox();if(r==="insights")Insights.after();
 }
 setTheme(curTheme(),true);
 (async()=>{
@@ -712,7 +724,7 @@ setTheme(curTheme(),true);
   sb.auth.onAuthStateChange((event,session)=>{
     setTimeout(async()=>{
       if(event==="PASSWORD_RECOVERY"){recovering=true;me=session.user.id;phase="recovery";authMsg="";return render()}
-      if(event==="SIGNED_OUT"){me=null;myProfile=null;viewing=null;logsArr=[];timer=null;invalidate();phase="auth";authMsg="";return render()}
+      if(event==="SIGNED_OUT"){Social.stop();me=null;myProfile=null;viewing=null;logsArr=[];timer=null;invalidate();phase="auth";authMsg="";return render()}
       if(event==="SIGNED_IN"&&session&&!recovering&&me!==session.user.id){me=session.user.id;await afterLogin()}
     },0);
   });

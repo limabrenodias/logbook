@@ -28,7 +28,7 @@ const Focus=(()=>{
   let sheet=null,pending=null,wake=null,lastP=-1,mounted=false;Scenes._living=cfg.living!==false;
 
   function load(){try{const o=JSON.parse(localStorage.getItem(LS)||"{}");return {...DEF,...o,custom:{...DEF.custom,...(o.custom||{})}}}catch(_){return {...DEF}}}
-  function save(){try{localStorage.setItem(LS,JSON.stringify({...cfg,_st:st}))}catch(_){}}
+  function save(){try{localStorage.setItem(LS,JSON.stringify({...cfg,_st:st}))}catch(_){}try{document.dispatchEvent(new CustomEvent("focus-state"))}catch(_){}}
   function T(){return cfg.timer==="custom"?{n:"Custom",...cfg.custom}:TIMERS[cfg.timer]||TIMERS.classic}
   function mins(ph){const t=T();return ph==="focus"?t.f:ph==="short"?t.s:t.l}
   function fresh(ph,round){return {phase:ph,round,running:false,endAt:0,remain:mins(ph)*60000,startedAt:null,segs:[]}}
@@ -38,7 +38,7 @@ const Focus=(()=>{
   function breakBell(){return cfg.breakBell||scene().breakBell}
   function task(){const t=cfg.task||{};return {s:t.s||focus(),t:t.t||"Mixed",a:t.a||""}}
   function remaining(){return st.running?Math.max(0,st.endAt-Date.now()):st.remain}
-  function total(){return mins(st.phase)*60000}
+  function total(){return st.tot||mins(st.phase)*60000}
   function elapsed(){return total()-remaining()}
   function fmt(ms){const s=Math.ceil(ms/1000);return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")}
   const PH={focus:"Focus mode",short:"Short break",long:"Long break"};const TAB={focus:"Focus",short:"Short break",long:"Long break"};const LBL={focus:"focus",short:"short break",long:"long break"};
@@ -78,7 +78,7 @@ const Focus=(()=>{
   function complete(){
     const was=st.phase;const started=st.startedAt||Date.now()-total();
     const rt=document.getElementById("fzRoot");if(rt){rt.classList.add("fz-root-done");setTimeout(()=>rt.classList.remove("fz-root-done"),2500)}
-    if(was==="focus"){const m=mins("focus");Sound.play(bell());notify("Focus session complete","Time for a gentle break 🍵");
+    if(was==="focus"){const m=Math.max(1,Math.round(total()/60000));Sound.play(bell());notify("Focus session complete","Time for a gentle break 🍵");
       const t0=T();const award=Points.finish(st,true,m,st.round%t0.r===0?t0.l:t0.s);lastAward=award;segClose(st.endAt);record(true,award,m);
       if(cfg.autoLog)doLog(m,started,task(),award);else if(award)toast(`+${award.total} focus points ✨`);
       advance(cfg.autoBreak);if(!cfg.autoBreak){Sound.stopAmbient();amPlaying=false;keepAwake(false)}
@@ -423,5 +423,15 @@ const Focus=(()=>{
 
   // resume a session that was running when the page was closed/reloaded
   if(st.running&&Date.now()>=st.endAt){setTimeout(complete,1500)}
-  return{render,unmount,paint,get running(){return st.running}};
+  // study together: start a focus that ends at the same moment as someone else's
+  function joinAt(endAt){
+    const ms=endAt-Date.now();if(ms<60000){toast("That session is almost over");return false}
+    if(st.phase==="focus"&&st.running){toast("Finish or skip your current focus first");return false}
+    if(st.phase==="focus"&&st.startedAt)partial();
+    if(st.phase!=="focus")Points.skipBreak();
+    st=fresh("focus",st.phase==="long"?1:st.phase==="short"?st.round+1:st.round);st.tot=ms;st.remain=ms;st.joined=true;
+    start(true);if(mounted)rerender();return true;
+  }
+  function state(){const tk=task();return {phase:st.phase,running:st.running,started:!!st.startedAt,endAt:st.running?st.endAt:null,remain:remaining(),total:total(),s:tk.s,t:tk.t,focusMin:T().f}}
+  return{render,unmount,paint,joinAt,state,get running(){return st.running}};
 })();
