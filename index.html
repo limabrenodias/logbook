@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@500;700;800&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<link rel="stylesheet" href="focus.css?v=202611191905">
-<link rel="stylesheet" href="features.css?v=202611191905">
+<link rel="stylesheet" href="focus.css?v=202611191935">
+<link rel="stylesheet" href="features.css?v=202611191935">
 <style>
 :root,:root[data-theme="night"]{
   color-scheme:dark;
@@ -208,17 +208,18 @@ nav.bottom{display:none}
 <div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
 <div id="tip"></div>
 <div id="toast"></div>
-<script src="sound.js?v=202611191905"></script>
-<script src="scenes.js?v=202611191905"></script>
-<script src="backdrops.js?v=202611191905"></script>
-<script src="paintings.js?v=202611191905"></script>
-<script src="clocks.js?v=202611191905"></script>
-<script src="fx.js?v=202611191905"></script>
-<script src="points.js?v=202611191905"></script>
-<script src="focus.js?v=202611191905"></script>
-<script src="goals.js?v=202611191905"></script>
-<script src="insights.js?v=202611191905"></script>
-<script src="social.js?v=202611191905"></script>
+<script src="sound.js?v=202611191935"></script>
+<script src="scenes.js?v=202611191935"></script>
+<script src="backdrops.js?v=202611191935"></script>
+<script src="paintings.js?v=202611191935"></script>
+<script src="clocks.js?v=202611191935"></script>
+<script src="fx.js?v=202611191935"></script>
+<script src="points.js?v=202611191935"></script>
+<script src="focus.js?v=202611191935"></script>
+<script src="goals.js?v=202611191935"></script>
+<script src="insights.js?v=202611191935"></script>
+<script src="social.js?v=202611191935"></script>
+<script src="backup.js?v=202611191935"></script>
 <script>
 "use strict";
 /* ============ CONFIG ============ */
@@ -512,35 +513,36 @@ function viewManage(){
    <div class="row" style="margin-top:10px"><input type="text" id="tokName" placeholder="Name (e.g. Anki on PC)"><button class="btn sec" data-act="newToken">Create token</button></div></div>
   <div class="card"><h2>Import from Polylogger</h2><p class="sub">Pick your exported CSV. Rows already in your logbook are skipped, so importing again is safe.</p>
    <input type="file" id="csvFile" accept=".csv,text/csv"><div id="importBox"></div></div>
-  <div class="card"><h2>Export</h2><p class="sub">All logs as CSV (same columns as Polylogger).</p><div class="row"><button class="btn sec" data-act="export">Copy CSV</button><button class="btn sec" data-act="download">Download CSV</button></div><textarea id="exportBox" style="display:none;width:100%;height:120px;margin-top:10px"></textarea></div>
+  ${Backup.card()}
   <div class="card"><h2>Account</h2><p class="sub">Signed in as <b>@${esc(myProfile.username)}</b>.</p><button class="btn sec" data-act="logout">Log out</button></div>`;
 }
 function renderImportBox(){
-  const box=$("#importBox");if(!box||!importState)return;const st=importState;
+  const box=$((importState&&importState.box)||"#importBox");if(!box||!importState)return;const st=importState;
   if(st.done){box.innerHTML=`<p style="margin-top:12px">✓ Imported <b>${st.added}</b> logs${st.skipped?` · skipped ${st.skipped} already present`:""}.</p>`;return}
   if(st.progress!=null){box.innerHTML=`<p style="margin-top:12px">Saving… ${st.progress}/${st.total}</p>`;return}
-  box.innerHTML=`<p style="margin-top:12px"><b>${st.rows.length}</b> rows found. Rename subjects before importing if you like:</p>
+  box.innerHTML=`${st.note?`<p style="margin-top:12px">${st.note}</p>`:""}<p style="margin-top:12px"><b>${st.rows.length}</b> rows found. Rename subjects before importing if you like:</p>
   <table class="map"><tr><th>In CSV</th><th>Rows</th><th>Hours</th><th>Import as</th></tr>${st.langs.map((l,i)=>`<tr><td>${esc(l.name)}</td><td class="num">${l.n}</td><td class="num">${H(l.m)}</td><td><input type="text" data-map="${i}" value="${esc(l.to)}"></td></tr>`).join("")}</table>
   <button class="btn" data-act="doImport">Import ${st.rows.length} logs</button>`;
 }
-function parseCSV(t){const rows=[];let row=[],f="",q=false;t=t.replace(/^﻿/,"");
-  for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=ch}else if(ch==='"')q=true;else if(ch===","){row.push(f);f=""}else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&t[i+1]==="\n")i++;row.push(f);rows.push(row);row=[];f=""}else f+=ch}
+function parseCSV(t){const rows=[];let row=[],f="",q=false;t=t.replace(/^\ufeff/,"");const h0=t.split(/\r?\n/)[0]||"";const SEP=h0.split(";").length>h0.split(",").length?";":",";
+  for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=ch}else if(ch==='"')q=true;else if(ch===SEP){row.push(f);f=""}else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&t[i+1]==="\n")i++;row.push(f);rows.push(row);row=[];f=""}else f+=ch}
   if(f||row.length){row.push(f);rows.push(row)}return rows.filter(r=>r.some(x=>x.trim()))}
-async function handleCSV(file){
+async function handleCSV(file,boxSel){
   const rows=parseCSV(await file.text());if(!rows.length)return toast("That file is empty.");const h=rows.shift().map(x=>x.trim().toLowerCase());
-  const iA=h.findIndex(x=>x.startsWith("activity")&&!x.includes("type")),iL=h.findIndex(x=>x.startsWith("language")),iT=h.findIndex(x=>x.includes("type")),iM=h.findIndex(x=>x.includes("minute")),iD=h.findIndex(x=>x.startsWith("date"));
-  if([iL,iT,iM,iD].some(x=>x<0))return toast("That doesn't look like a Polylogger CSV.");
+  const iA=h.findIndex(x=>x.startsWith("activity")&&!x.includes("type")),iL=h.findIndex(x=>x.startsWith("language")),iT=h.findIndex(x=>x.includes("type")),iM=h.findIndex(x=>x.includes("minute")),iD=h.findIndex(x=>x.startsWith("date")),iS=h.indexOf("source");
+  if([iL,iT,iM,iD].some(x=>x<0))return toast("That doesn't look like a Logbook or Polylogger CSV.");
+  const own=iS>=0;   // our own export: keep subjects and sources exactly as they are
   const out=[];const lang={};
   for(const r of rows){const d=(r[iD]||"").trim(),m=parseInt(r[iM],10);if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!(m>0))continue;const L=(r[iL]||"").trim()||"Other";
-    out.push({a:iA>=0?(r[iA]||"").trim():"",L,t:(r[iT]||"").trim()||"Mixed",m:Math.min(m,1440),d});const e=lang[L]||(lang[L]={name:L,n:0,m:0,to:IMPORT_REMAP[L]||L});e.n++;e.m+=m}
-  importState={rows:out,langs:Object.values(lang).sort((a,b)=>b.m-a.m)};renderImportBox();
+    out.push({a:iA>=0?(r[iA]||"").trim():"",L,t:(r[iT]||"").trim()||"Mixed",m:Math.min(m,1440),d,src:own?((r[iS]||"").trim()||"manual"):"polylogger"});const e=lang[L]||(lang[L]={name:L,n:0,m:0,to:own?L:(IMPORT_REMAP[L]||L)});e.n++;e.m+=m}
+  importState={rows:out,langs:Object.values(lang).sort((a,b)=>b.m-a.m),box:boxSel||"#importBox",note:own?"This is a Logbook export — subjects and sources are kept as they are.":""};renderImportBox();
 }
 async function doImport(){
   const st=importState;document.querySelectorAll("[data-map]").forEach(inp=>{const l=st.langs[+inp.dataset.map];l.to=inp.value.trim()||l.name});
   const to={};st.langs.forEach(l=>to[l.name]=l.to);
   const sig=(d,s,t,m,a)=>[d,s,t,m,(a||"").toLowerCase()].join("|");const have={};for(const l of all().logs){const k=sig(l.d,l.s,l.t,l.m,l.a);have[k]=(have[k]||0)+1}
   const rows=[];let skipped=0;
-  for(const r of st.rows){const s=to[r.L];const k=sig(r.d,s,r.t,r.m,r.a);if(have[k]){have[k]--;skipped++;continue}rows.push({d:r.d,subject:s,type:r.t,minutes:r.m,activity:r.a.slice(0,300),src:"polylogger"})}
+  for(const r of st.rows){const s=to[r.L];const k=sig(r.d,s,r.t,r.m,r.a);if(have[k]){have[k]--;skipped++;continue}rows.push({d:r.d,subject:s,type:r.t,minutes:r.m,activity:r.a.slice(0,300),src:(r.src||"polylogger").slice(0,30)})}
   st.total=rows.length;st.progress=0;renderImportBox();
   for(let i=0;i<rows.length;i+=400){const chunk=rows.slice(i,i+400);const {error}=await sb.from("logs").insert(chunk);if(error){fail(error,"Import stopped: "+error.message);st.progress=null;await refresh();return}st.progress=Math.min(rows.length,i+400);renderImportBox()}
   st.done=true;st.added=rows.length;st.skipped=skipped;await loadLogs();render();toast(`Imported ${rows.length} logs`);
@@ -711,7 +713,7 @@ function render(){
   const r=route();
   if(r==="focus"&&typeof Focus!=="undefined"){document.body.classList.add("immersive");Focus.render(v);return}
   document.body.classList.remove("immersive");if(typeof Focus!=="undefined"){Focus.unmount();Focus.paint(false)}
-  if(r==="manage"&&$("#importBox")&&importState&&!importState.done){renderImportBox();return}
+  if(r==="manage"&&$((importState&&importState.box)||"#importBox")&&importState&&!importState.done){renderImportBox();return}
   v.innerHTML=r==="stats"?viewStats():r==="logs"?viewLogs():r==="manage"?viewManage():r==="insights"?Insights.view():r==="friends"?Social.view():viewHome();
   if(r==="home")afterHome();if(r==="stats")afterStats();if(r==="manage")renderImportBox();if(r==="insights")Insights.after();
 }

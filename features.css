@@ -141,3 +141,7 @@
   nav.bottom a.nl svg{width:20px;height:20px}
   .cmp{grid-template-columns:80px 1fr 74px}
 }
+/* Export & backup */
+.bk-list{display:flex;flex-direction:column;gap:6px;margin:14px 0 10px}
+.bk{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:10px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;font-size:13.5px}
+.bk .muted{font-size:12.5px;margin-top:1px}.bk .btn{flex:none}
