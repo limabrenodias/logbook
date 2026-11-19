@@ -156,7 +156,7 @@ const Focus=(()=>{
   /* ---------- rendering ---------- */
   function imm(){return cfg.layout==="immersive"}
   function vars(){const p=scene().pal;const light=scene().light;
-    if(imm()){const d=(scene().imm||{dark:!light}).dark;
+    if(imm()&&!scene().painting){const d=(scene().imm||{dark:!light}).dark;
       return d?`--fz-bg:${p.bg};--fz-card:transparent;--fz-ink:#fff;--fz-muted:rgba(255,255,255,.78);--fz-accent:#fff;--fz-chip:rgba(255,255,255,.14);--fz-line:rgba(255,255,255,.3);--fz-on-accent:#1a1a1a;--fz-face:rgba(255,255,255,.08);--fz-card-solid:rgba(255,255,255,.24)`
               :`--fz-bg:${p.bg};--fz-card:transparent;--fz-ink:${p.ink};--fz-muted:${p.muted};--fz-accent:${p.accent};--fz-chip:rgba(255,255,255,.5);--fz-line:rgba(0,0,0,.12);--fz-on-accent:#fff;--fz-face:rgba(255,255,255,.55);--fz-card-solid:rgba(255,255,255,.85)`}
     return `--fz-bg:${p.bg};--fz-card:${p.card};--fz-ink:${p.ink};--fz-muted:${p.muted};--fz-accent:${p.accent};--fz-chip:${p.chip};--fz-line:${p.line};--fz-on-accent:${light?"#fff":"#1a1a1a"};--fz-face:${light?"#fffdf9":"rgba(255,255,255,.07)"};--fz-card-solid:${light?"#fff":"rgba(255,255,255,.13)"}`}
@@ -192,8 +192,23 @@ const Focus=(()=>{
         <div class="fz-dots" id="fzDots">${dotsHTML()}</div></div>
       <div class="fz-imm-foot"><span class="cap">${sc.credit?esc(sc.credit):esc(sc.name)} · <i>${esc(sc.caption)}</i></span><span class="nx"><small>UP NEXT</small> <b id="fzNext">${upNext()}</b></span></div>
       <div id="fzPresence"></div><div id="fzSheet"></div></div>`}
+  function viewGallery(){const tk=task(),sc=scene();
+    return `<div class="fz fz-imm fz-gal imm-light" id="fzRoot" style="${vars()}">
+      <div class="fz-imm-top fz-top">${topBar()}</div>
+      <div class="gal">
+        <figure class="gal-art"><div class="gal-hang" id="fzArt">${sc.art()}${sc.fx?`<canvas class="pt-fx" id="fzFx"></canvas>`:""}</div>
+          <figcaption><span class="cap-h">${esc(sc.caption)}</span><span>${esc(sc.credit||sc.name)}</span></figcaption></figure>
+        <div class="gal-panel">${tabsHTML()}
+          <div class="fz-clock" id="fzClock" data-style="${cfg.clock}" data-fz="cycleClock" title="Tap to change the clock style">${Clocks.html(cfg.clock)}</div>
+          <p class="fz-quote" id="fzQuote">“${quote()}”</p>${ctrlHTML()}
+          <div id="fzSetup">${setupHTML()}</div>
+          <button class="fz-imm-task" data-fz="task"><small>Working on</small><span>${esc(tk.s)} · ${esc(tk.t)}${tk.a?" — "+esc(tk.a):""}</span></button>
+          <div class="fz-dots" id="fzDots">${dotsHTML()}</div>
+          <div class="gal-next"><small>UP NEXT</small> <b id="fzNext">${upNext()}</b></div></div>
+      </div>
+      <div id="fzPresence"></div><div id="fzSheet"></div></div>`}
   function view(){
-    if(imm())return viewImm();
+    if(imm())return scene().painting?viewGallery():viewImm();
     const t=T(),tk=task();
     return `<div class="fz" id="fzRoot" style="${vars()}"><div class="fz-shell">
       <div class="fz-top">${topBar()}</div>      <div class="fz-card">
@@ -222,7 +237,9 @@ const Focus=(()=>{
   function render(el){
     if(typeof readOnly==="function"&&readOnly()&&typeof switchView==="function"){switchView(me);return}
     mounted=true;el.innerHTML=view();lastP=-1;paint(true);renderSheet();
-    const sc=scene();if(imm()&&sc.fx)Fx.start(sc.fx,document.getElementById("fzFx"));else Fx.stop();
+    const sc=scene();if(Scenes.fitPaintings){Scenes.fitPaintings();requestAnimationFrame(Scenes.fitPaintings)}
+    if(imm()&&sc.fx)Fx.start(sc.fx,document.getElementById("fzFx"));else Fx.stop();
+    document.querySelectorAll(".pt-img").forEach(i=>i.addEventListener("load",()=>Scenes.fitPaintings&&Scenes.fitPaintings(),{once:true}));
   }
   function unmount(){if(mounted)Fx.stop();mounted=false}
   function paint(full){
@@ -239,7 +256,7 @@ const Focus=(()=>{
     if(wasIdle!==idle()){wasIdle=idle();const sp=document.getElementById("fzSetup");if(sp)sp.innerHTML=setupHTML()}
     const ck=document.getElementById("fzClock");if(ck){const inner=ck.firstElementChild;if(inner){inner.dataset.run=st.running?"1":"0";Clocks.paint(cfg.clock,inner,r,total(),LBL[st.phase])}}
     const sc=scene();if(full||Math.abs(p-lastP)>.002){const ctx={phase:st.phase,started:!!st.startedAt,running:st.running,focusMin:mins("focus"),raw:p};const pp=st.phase==="focus"?p:1-p;
-      if(imm()){const b=document.getElementById("fzBg");if(b){if(sc.bgUpdate)sc.bgUpdate(b,pp,ctx);else if(!sc.bg&&sc.update)sc.update(b,pp,ctx)}}
+      if(imm()&&!sc.painting){const b=document.getElementById("fzBg");if(b){if(sc.bgUpdate)sc.bgUpdate(b,pp,ctx);else if(!sc.bg&&sc.update)sc.update(b,pp,ctx)}}
       else{const a=document.getElementById("fzArt");if(a&&sc.update)sc.update(a,pp,ctx)}lastP=p}
     const pr=document.getElementById("fzPresence");if(pr){const need=Points.needsPresence(st);if(need!==(pr.dataset.on==="1")){pr.dataset.on=need?"1":"0";
       pr.innerHTML=need?`<div class="fz-presence"><div><b>Welcome back 👋</b><span>The next session started on its own. Tap anywhere or press a key to confirm you're here — focus points count from now.</span></div></div>`:""}}

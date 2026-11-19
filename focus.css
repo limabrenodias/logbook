@@ -285,3 +285,33 @@ input.fz-vol::-moz-range-thumb{width:16px;height:16px;border-radius:50%;backgrou
 .pt-svg image{image-rendering:auto}
 .pt-blur{position:absolute;inset:-60px;background-size:cover;background-position:center;filter:blur(38px) saturate(1.05) brightness(.82);transform:scale(1.08)}
 .fz-bg .pt-whole{position:absolute;inset:0;filter:drop-shadow(0 20px 60px rgba(0,0,0,.35))}
+
+/* ===== Gallery: the painting whole, the timer beside it ===== */
+.fz-gal{background:var(--fz-bg)}
+.fz-gal::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;background-image:radial-gradient(120% 90% at 30% 40%,rgba(255,255,255,.55),rgba(255,255,255,0) 60%)}
+.gal{position:relative;z-index:2;flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) clamp(340px,30vw,440px);gap:clamp(18px,3vw,48px);padding:0 clamp(18px,3vw,48px) clamp(16px,3vh,32px)}
+.gal-art{margin:0;min-height:0;display:flex;flex-direction:column;gap:12px}
+.gal-hang{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.gal-hang .pt-framed{display:block;border-radius:3px;box-shadow:0 0 0 clamp(8px,1vw,14px) #fbfaf7,0 0 0 calc(clamp(8px,1vw,14px) + 1px) rgba(0,0,0,.06),0 30px 70px rgba(40,35,30,.28),0 8px 18px rgba(40,35,30,.14)}
+.gal-hang .pt-fx{position:absolute;pointer-events:none}
+.gal-art figcaption{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12.5px;color:var(--fz-muted);text-align:center}
+.gal-art .cap-h{font-family:Caveat,cursive;font-size:22px;color:var(--fz-muted)}
+.gal-panel{min-height:0;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:safe center;text-align:center;gap:4px;background:var(--fz-card,rgba(253,252,250,.6));border:1px solid var(--fz-line);border-radius:32px;padding:clamp(16px,2.5vh,28px) clamp(14px,1.6vw,24px);backdrop-filter:blur(10px)}
+.fz-gal .gal-panel .ck-ring,.fz-gal .gal-panel .ck-classic,.fz-gal .gal-panel .ck-alarm{width:min(34vh,300px,100%)}
+.fz-gal.running .gal-panel .ck-ring,.fz-gal.running .gal-panel .ck-classic,.fz-gal.running .gal-panel .ck-alarm{width:min(42vh,330px,100%)}
+.fz-gal .ck-ring .ck-t{font-size:clamp(46px,6.5vh,72px)!important;font-weight:700}
+.fz-gal .ck-digital .fz-time{font-size:clamp(64px,10vh,110px)}
+.fz-gal .fz-setup{grid-template-columns:repeat(2,minmax(0,1fr));max-width:340px}
+.fz-gal .fz-quick{justify-content:center}
+.fz-gal .fz-ctrl{justify-content:center}
+.fz-gal .fz-btn.primary{background:var(--fz-accent);color:#fff}
+.gal-next{margin-top:8px;font-size:13px;color:var(--fz-muted)}.gal-next small{font-size:10.5px;font-weight:800;letter-spacing:.16em}
+.fz-gal.calm .gal-art figcaption,.fz-gal.calm .gal-next{opacity:0;transition:opacity .9s}
+.fz-gal.calm .gal-panel{background:transparent;border-color:transparent;backdrop-filter:none;transition:all .9s}
+@media (max-aspect-ratio:1/1){
+  .gal{grid-template-columns:1fr;grid-template-rows:minmax(0,48vh) auto;overflow-y:auto}
+  .gal-panel{overflow:visible}
+}
+/* clean layout: whole painting, natural proportions */
+.fz-art:has(.pt-fit){aspect-ratio:auto;height:min(52vh,440px);width:100%}
+.fz-art .pt-framed{border-radius:3px!important;box-shadow:0 0 0 10px #fbfaf7,0 0 0 11px rgba(0,0,0,.06),0 22px 50px rgba(40,35,30,.22)!important}

@@ -61,11 +61,9 @@
       const va=innerWidth/Math.max(1,innerHeight),pa=A.w/A.h,whole=pa<va*.72||pa>va*1.6;
       const main=`<svg class="fz-bgsvg pt-svg${whole?" pt-whole":""}" viewBox="0 0 ${VW} ${VH}" preserveAspectRatio="xMidYMid ${whole?"meet":"slice"}" aria-hidden="true"><defs>${defs}</defs>${inner}</svg>`;
       return whole?`<div class="pt-blur" style="background-image:url('${src}')${A.local?`,url('${A.local}')`:""}"></div>${main}`:main}
-    const s=Math.min(VW,VH),x=Math.max(0,Math.min(VW-s,A.f[0]*VW-s/2)),y=Math.max(0,Math.min(VH-s,A.f[1]*VH-s/2));
-    return `<svg class="fz-svg pt-svg pt-framed" viewBox="${x} ${y} ${s} ${s}" aria-hidden="true"><defs>${defs}</defs>${inner}</svg>`;
+    return `<svg class="pt-svg pt-framed pt-fit" data-ar="${A.w/A.h}" viewBox="0 0 ${VW} ${VH}" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><defs>${defs}</defs>${inner}</svg>`;
   }
   function update(root,p,ctx){
-    root.querySelectorAll(".pt-kb").forEach(g=>{const cx=+g.dataset.cx,cy=+g.dataset.cy,z=1+.07*p;g.setAttribute("transform",`translate(${cx} ${cy}) scale(${z.toFixed(4)}) translate(${-cx} ${-cy})`)});
     root.querySelectorAll(".pt-sun").forEach(s=>s.setAttribute("opacity",(.15+.55*(ctx&&ctx.phase==="focus"?ctx.raw:0)).toFixed(3)));
   }
   const order=Object.keys(P);
@@ -75,6 +73,10 @@
   Object.keys(old).forEach(k=>{if(!Scenes[k])Scenes[k]={...old[k],group:"Illustrations"}});
   Scenes.preview=k=>{const s=Scenes[k];return s.painting?`background:url('${CM(s.art_.file,330)}') ${s.art_.f[0]*100}% ${s.art_.f[1]*100}%/cover, ${s.pal.bg}`:`background:${s.pal.bg}`};
 
+  function fit(){document.querySelectorAll(".pt-fit").forEach(svg=>{const box=svg.parentElement;if(!box)return;const ar=+svg.dataset.ar||1;
+    const bw=box.clientWidth,bh=box.clientHeight||bw/ar;let w=bw,h=w/ar;if(h>bh){h=bh;w=h*ar}svg.style.width=Math.floor(w)+"px";svg.style.height=Math.floor(h)+"px";
+    const fx=box.querySelector(".pt-fx");if(fx){fx.style.width=svg.style.width;fx.style.height=svg.style.height}})}
+  Scenes.fitPaintings=fit;addEventListener("resize",()=>requestAnimationFrame(fit));
   // gentle motion: drift the turbulence that ripples water / sways grass (≈8 fps keeps it light)
   setInterval(()=>{if(document.hidden)return;const ts=document.querySelectorAll(".lv-t");if(!ts.length)return;const t=performance.now()/1000;
     ts.forEach((n,i)=>{const bx=+n.dataset.bx,by=+n.dataset.by;n.setAttribute("baseFrequency",`${(bx*(1+.22*Math.sin(t*.42+i))).toFixed(5)} ${(by*(1+.16*Math.sin(t*.57+1.3+i))).toFixed(5)}`)})},125);
