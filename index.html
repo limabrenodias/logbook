@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111110">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Logbook">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233987e5'/%3E%3Cpath d='M18 46V18h6v22h22v6z' fill='white'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Logbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#111110;--surface-1:#1a1a19;--surface-2:#232321;--surface-3:#2d2d2a;--border:#34342f;
+  --text-primary:#f0efec;--text-secondary:#c3c2b7;--text-muted:#8d8c83;
+  --accent:#3987e5;--accent-ink:#ffffff;--accent-soft:rgba(57,135,229,.16);
+  --danger:#e66767;--good:#0ca30c;
+  --h0:#2d2d2a;--h1:#184f95;--h2:#256abf;--h3:#3987e5;--h4:#6da7ec;--h5:#b7d3f6;
+  --series-1:#3987e5;
+}
+@media (prefers-color-scheme: light){
+  :root:where(:not([data-theme="dark"])){
+    color-scheme:light;
+    --bg:#f4f4f2;--surface-1:#fcfcfb;--surface-2:#f0efec;--surface-3:#e4e3df;--border:#dddcd6;
+    --text-primary:#0b0b0b;--text-secondary:#52514e;--text-muted:#7b7a74;
+    --accent:#2a78d6;--accent-soft:rgba(42,120,214,.12);--danger:#c93a39;--good:#008300;
+    --h0:#e4e3df;--h1:#cde2fb;--h2:#9ec5f4;--h3:#5598e7;--h4:#256abf;--h5:#104281;
+    --series-1:#2a78d6;
+  }
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  --bg:#f4f4f2;--surface-1:#fcfcfb;--surface-2:#f0efec;--surface-3:#e4e3df;--border:#dddcd6;
+  --text-primary:#0b0b0b;--text-secondary:#52514e;--text-muted:#7b7a74;
+  --accent:#2a78d6;--accent-soft:rgba(42,120,214,.12);--danger:#c93a39;--good:#008300;
+  --h0:#e4e3df;--h1:#cde2fb;--h2:#9ec5f4;--h3:#5598e7;--h4:#256abf;--h5:#104281;
+  --series-1:#2a78d6;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text-primary);font:15px/1.45 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+.num{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+nav.side{position:sticky;top:0;height:100vh;padding:24px 16px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:4px}
+.brand{font-family:"JetBrains Mono",monospace;font-weight:600;letter-spacing:.28em;font-size:13px;color:var(--text-secondary);padding:0 12px 20px}
+.brand b{color:var(--accent)}
+nav a.nl{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;color:var(--text-secondary);text-decoration:none;font-weight:500}
+nav a.nl:hover{background:var(--surface-2);color:var(--text-primary)}
+nav a.nl.on{background:var(--accent-soft);color:var(--text-primary)}
+nav a.nl svg{width:18px;height:18px;flex:none}
+.side .grow{flex:1}
+.ghost{background:none;border:1px solid var(--border);border-radius:9px;padding:8px 12px;cursor:pointer;color:var(--text-secondary)}
+.ghost:hover{background:var(--surface-2);color:var(--text-primary)}
+main{min-width:0;padding:28px clamp(16px,4vw,44px) 110px;max-width:1180px;width:100%}
+h1{font-size:24px;margin:0 0 4px;font-weight:700;letter-spacing:-.01em}
+h2{font-size:16px;margin:0 0 2px;font-weight:600}
+.sub{color:var(--text-secondary);font-size:13.5px;margin:0 0 16px}
+.card{min-width:0;background:var(--surface-1);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
+.grid{display:grid;gap:16px}.grid>*{min-width:0}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.stat{background:var(--surface-1);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
+.stat .k{font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);font-weight:600}
+.stat .v{font-size:26px;font-weight:600;margin-top:4px}
+.stat .v small{font-size:14px;color:var(--text-secondary);font-weight:500;margin-left:3px}
+.stat .d{font-size:12.5px;color:var(--text-secondary);margin-top:2px}
+.head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.head .sub{margin:0}
+select,input[type=text],input[type=number],input[type=date],input[type=search],textarea{background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:8px 11px;min-height:38px;outline:none}
+select:focus,input:focus,textarea:focus{border-color:var(--accent)}
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
+.seg button{background:none;border:0;padding:6px 12px;border-radius:7px;cursor:pointer;color:var(--text-secondary);font-weight:500;font-size:13.5px}
+.seg button.on{background:var(--surface-1);color:var(--text-primary);box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:9px;padding:9px 16px;font-weight:600;cursor:pointer}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.sec{background:var(--surface-2);color:var(--text-primary);border:1px solid var(--border)}
+.btn.danger{background:var(--danger)}
+.fab{position:fixed;right:24px;bottom:24px;width:58px;height:58px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:30px;line-height:1;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.35);z-index:20}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--surface-3);color:var(--text-secondary)}
+.muted{color:var(--text-muted)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+/* heatmap */
+.hm-wrap{overflow-x:auto;padding-bottom:4px}
+.hm-legend{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-muted);justify-content:flex-end;margin-top:8px}
+.hm-legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+/* chart */
+.chart{position:relative;width:100%}
+.chart svg{display:block}
+.axis text{fill:var(--text-muted);font-size:11px;font-family:Inter,sans-serif}
+.grid-l{stroke:var(--border);stroke-width:1}
+#tip{position:fixed;pointer-events:none;z-index:60;background:var(--surface-3);color:var(--text-primary);border:1px solid var(--border);border-radius:9px;padding:8px 10px;font-size:12.5px;box-shadow:0 6px 18px rgba(0,0,0,.3);display:none;max-width:240px}
+#tip b{font-weight:600}
+#tip .tl{color:var(--text-secondary)}
+/* ratio bars */
+.rb{display:grid;grid-template-columns:110px 1fr 92px;gap:10px;align-items:center;margin:7px 0;font-size:13.5px}
+.rb .track{height:10px;background:var(--surface-2);border-radius:5px;overflow:hidden}
+.rb .fill{height:100%;background:var(--series-1);border-radius:0 4px 4px 0}
+.rb .val{text-align:right;color:var(--text-secondary)}
+/* logs */
+.day{margin-top:18px}
+.day h3{font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin:0 0 8px;display:flex;justify-content:space-between;font-weight:600}
+.log{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--surface-1);border:1px solid var(--border);border-radius:11px;margin-bottom:6px}
+.log .main{flex:1;min-width:0}
+.log .act{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log .act.empty{color:var(--text-muted);font-style:italic;font-weight:400}
+.log .meta{font-size:12.5px;color:var(--text-secondary)}
+.log .min{font-weight:600;white-space:nowrap}
+.ib{background:none;border:0;cursor:pointer;color:var(--text-muted);padding:6px;border-radius:7px;display:grid;place-items:center}
+.ib:hover{background:var(--surface-2);color:var(--text-primary)}
+.ib svg{width:16px;height:16px}
+.ib.confirm{color:#fff;background:var(--danger);font-size:12px;font-weight:600;padding:5px 9px}
+.auto{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-left:6px}
+/* modal */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.scrim.open{display:flex}
+.modal{background:var(--surface-1);border:1px solid var(--border);border-radius:16px;width:min(520px,100%);padding:22px;max-height:92vh;overflow:auto}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.field label{font-size:13px;font-weight:600}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.clock{font-family:"JetBrains Mono",monospace;font-size:44px;font-weight:600;text-align:center;padding:10px 0 6px;letter-spacing:.02em}
+.banner{display:none;align-items:center;gap:12px;flex-wrap:wrap;background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;padding:10px 14px;margin-bottom:16px}
+.banner.on{display:flex}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--danger);animation:p 1.4s infinite}
+@keyframes p{50%{opacity:.25}}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:4px 6px 4px 12px;font-size:13.5px}
+.chip button{background:none;border:0;cursor:pointer;color:var(--text-muted);font-size:15px;line-height:1;padding:0 4px}
+table.map{width:100%;border-collapse:collapse;font-size:13.5px;margin:10px 0}
+table.map td,table.map th{padding:6px 6px;border-bottom:1px solid var(--border);text-align:left}
+table.map input{width:100%}
+#toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--surface-3);border:1px solid var(--border);padding:10px 16px;border-radius:10px;z-index:70;display:none;font-size:14px}
+.empty-state{text-align:center;padding:36px 16px;color:var(--text-secondary)}
+.wk{display:flex;gap:14px;flex-wrap:wrap}
+.wk div{min-width:120px}
+.delta-up{color:var(--good)} .delta-down{color:var(--danger)}
+/* mobile */
+nav.bottom{display:none}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr}
+  nav.side{display:none}
+  nav.bottom{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--surface-1);border-top:1px solid var(--border);z-index:30;padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+  nav.bottom a.nl{flex:1;flex-direction:column;gap:2px;font-size:11px;padding:6px 4px}
+  .g4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g3,.g2{grid-template-columns:1fr}
+  .fab{bottom:84px;right:18px}
+  main{padding-top:18px}
+  .rb{grid-template-columns:78px 1fr 96px;font-size:13px}
+  .mtop{display:flex!important}
+}
+.mtop{display:none;align-items:center;justify-content:space-between;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="side" id="sidenav"></nav>
+  <main>
+    <div class="mtop"><div class="brand" style="padding:0">LOG<b>BOOK</b></div><div class="row"><span id="mswitch"></span><button class="ghost" data-act="theme">Theme</button></div></div>
+    <div class="banner" id="banner"></div>
+    <div id="view"></div>
+  </main>
+</div>
+<nav class="bottom" id="bottomnav"></nav>
+<button class="fab" id="fab" title="Add a log" aria-label="Add a log" style="display:none">+</button>
+<div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
+<div id="tip"></div>
+<div id="toast"></div>
+<script>
+"use strict";
+/* ============ CONFIG ============ */
+const SUPABASE_URL="https://bhbvnjcyubwrnebgewmj.supabase.co";
+const SUPABASE_KEY="sb_publishable_VvI57sGerWzNx9HkWIExzA_w0fhKsJa";
+
+/* ============ constants ============ */
+const LANGS=["English","Spanish","French","German","Italian","Portuguese","Polish","Dutch","Russian","Ukrainian","Czech","Slovak","Hungarian","Romanian","Bulgarian","Greek","Turkish","Swedish","Norwegian","Danish","Finnish","Icelandic","Croatian","Serbian","Slovenian","Lithuanian","Latvian","Estonian","Irish","Welsh","Catalan","Basque","Arabic","Hebrew","Persian","Hindi","Urdu","Bengali","Punjabi","Tamil","Japanese","Korean","Mandarin Chinese","Cantonese","Vietnamese","Thai","Indonesian","Malay","Tagalog","Swahili","Latin","Esperanto"];
+const BASE_TYPES=["Listening","Speaking","Writing","Reading","Grammar","Vocabulary","Pronunciation","Mixed"];
+const IMPORT_REMAP={"Rätoromanisch":"Aviation","Portuguese":"Programming"};
+const MANUAL_SRC=["manual","stopwatch","timer","polylogger"];
+const ICONS={
+ home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
+ stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+ logs:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
+ manage:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>',
+ edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
+ del:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>'
+};
+const ROUTES=[["home","Home"],["stats","Stats"],["logs","Logs"],["manage","Setup"]];
+
+/* ============ state ============ */
+let sb=null;
+let me=null;            // my user id
+let myProfile=null;     // {id,username,focus,subjects,types}
+let viewing=null;       // user id whose logbook is shown
+let viewProfile=null;
+let sharedWithMe=[];    // [{id,username}]
+let myShares=[];        // [{id,username}]
+let tokens=[];
+let logsArr=[];
+let timer=null;
+let phase="boot";       // boot | auth | username | recovery | app | config
+let authMsg="";
+let cache=null;
+let ui={statSubj:null,range:"30D",hmYear:new Date().getFullYear(),hmSubj:"All",logQ:"",logSubj:"All",logType:"All",logLimit:150};
+
+/* ============ helpers ============ */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad=n=>String(n).padStart(2,"0");
+const ymd=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const parseD=s=>{const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
+const addDays=(d,n)=>{const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()+n);return x};
+const weekStart=d=>addDays(d,-((d.getDay()+6)%7));
+const daysBetween=(a,b)=>Math.round((parseD(b)-parseD(a))/864e5);
+const today=()=>ymd(new Date());
+const H=m=>(m/60).toFixed(1);
+const dur=m=>m<60?m+" min":(m/60).toFixed(1)+" h";
+const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const fmtDate=s=>parseD(s).toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short",year:"numeric"});
+const readOnly=()=>viewing!==me;
+const settings=()=>viewProfile||{subjects:[],types:[]};
+function toast(msg,ms=2800){const t=$("#toast");t.textContent=msg;t.style.display="block";clearTimeout(toast._t);toast._t=setTimeout(()=>t.style.display="none",ms)}
+function fail(e,msg){console.error(e);toast(msg||(e&&e.message)||"Something went wrong")}
+const fromRow=r=>({i:r.id,a:r.activity||"",s:r.subject,t:r.type,m:r.minutes,d:r.d,src:r.src,c:r.created_at||""});
+
+function all(){
+  if(cache)return cache;
+  const logs=[...logsArr].sort((a,b)=>a.d<b.d?1:a.d>b.d?-1:(b.c>a.c?1:b.c<a.c?-1:0));
+  const subjMin={},subjLast={};
+  for(const l of logs){subjMin[l.s]=(subjMin[l.s]||0)+l.m;if(!subjLast[l.s]||l.d>subjLast[l.s])subjLast[l.s]=l.d}
+  return cache={logs,subjMin,subjLast};
+}
+function invalidate(){cache=null}
+function subjects(){
+  const c=all();const seen=new Set();const out=[];
+  for(const s of settings().subjects||[])if(!seen.has(s)){seen.add(s);out.push(s)}
+  Object.keys(c.subjMin).sort((a,b)=>(c.subjLast[b]||"").localeCompare(c.subjLast[a]||"")||c.subjMin[b]-c.subjMin[a]).forEach(s=>{if(!seen.has(s)){seen.add(s);out.push(s)}});
+  return out;
+}
+function types(){return [...BASE_TYPES,...(settings().types||[]).filter(t=>!BASE_TYPES.includes(t))]}
+function focus(){
+  if(settings().focus)return settings().focus;
+  const cut=ymd(addDays(new Date(),-30));const m={};
+  for(const l of all().logs){if(l.d<cut)break;m[l.s]=(m[l.s]||0)+l.m}
+  return Object.keys(m).sort((a,b)=>m[b]-m[a])[0]||subjects()[0]||"French";
+}
+function byDate(filter){
+  const map={};for(const l of all().logs){if(filter&&filter!=="All"&&l.s!==filter)continue;const e=map[l.d]||(map[l.d]={m:0,s:{}});e.m+=l.m;e.s[l.s]=(e.s[l.s]||0)+l.m}
+  return map;
+}
+function streak(){const map=byDate();let d=new Date();if(!map[ymd(d)])d=addDays(d,-1);let n=0;while(map[ymd(d)]){n++;d=addDays(d,-1)}return n}
+
+/* ============ data layer ============ */
+async function loadLogs(){
+  const uid=viewing;const out=[];
+  for(let from=0;;from+=1000){
+    const {data,error}=await sb.from("logs").select("id,d,subject,type,minutes,activity,src,created_at").eq("user_id",uid).order("d",{ascending:false}).order("created_at",{ascending:false}).range(from,from+999);
+    if(error)throw error;out.push(...data.map(fromRow));if(data.length<1000)break;
+  }
+  if(uid!==viewing)return;
+  logsArr=out;invalidate();
+}
+async function loadProfile(id){const {data,error}=await sb.from("profiles").select("*").eq("id",id).maybeSingle();if(error)throw error;return data}
+async function loadShares(){
+  const {data,error}=await sb.from("shares").select("owner,viewer");if(error)throw error;
+  const ids=[...new Set(data.flatMap(r=>[r.owner,r.viewer]).filter(x=>x!==me))];
+  let names={};if(ids.length){const r=await sb.from("profiles").select("id,username").in("id",ids);if(!r.error)r.data.forEach(p=>names[p.id]=p.username)}
+  sharedWithMe=data.filter(r=>r.viewer===me).map(r=>({id:r.owner,username:names[r.owner]||"someone"}));
+  myShares=data.filter(r=>r.owner===me).map(r=>({id:r.viewer,username:names[r.viewer]||"someone"}));
+}
+async function loadTokens(){const {data,error}=await sb.from("ingest_tokens").select("token,name,created_at").order("created_at");if(!error)tokens=data}
+async function loadTimer(){if(readOnly())return;const {data,error}=await sb.from("timers").select("data").eq("user_id",me).maybeSingle();if(!error){timer=data?data.data:null;renderBanner()}}
+
+async function saveLog(e,old){
+  if(readOnly())return;
+  const row={d:e.d,subject:e.s,type:e.t,minutes:e.m,activity:e.a||"",src:e.src||"manual"};
+  if(old){const i=logsArr.findIndex(x=>x.i===old.i);if(i>=0)logsArr[i]={...old,...e};invalidate();render();
+    const {error}=await sb.from("logs").update(row).eq("id",old.i);if(error){fail(error,"Couldn't save the change");await refresh()}}
+  else{const tmp={...e,i:"tmp"+Math.random(),c:new Date().toISOString()};logsArr.push(tmp);invalidate();render();
+    const {data,error}=await sb.from("logs").insert(row).select("id,created_at").single();
+    if(error){logsArr=logsArr.filter(x=>x!==tmp);invalidate();render();return fail(error,"Couldn't save the log")}
+    tmp.i=data.id;tmp.c=data.created_at;}
+}
+async function deleteLog(l){
+  logsArr=logsArr.filter(x=>x.i!==l.i);invalidate();render();
+  const {error}=await sb.from("logs").delete().eq("id",l.i);if(error){fail(error,"Couldn't delete");await refresh()}
+}
+async function saveSettings(patch){
+  if(readOnly())return;
+  myProfile={...myProfile,...patch};viewProfile=myProfile;render();
+  const {error}=await sb.from("profiles").update(patch).eq("id",me);if(error)fail(error,"Couldn't save settings");
+}
+async function saveTimer(t){
+  timer=t;renderBanner();
+  const r=t?await sb.from("timers").upsert({user_id:me,data:t,updated_at:new Date().toISOString()}):await sb.from("timers").delete().eq("user_id",me);
+  if(r.error)fail(r.error,"Couldn't sync the stopwatch");
+}
+async function refresh(){try{await loadLogs();render()}catch(e){fail(e,"Couldn't load logs")}}
+
+/* ============ tooltip ============ */
+const tip=$("#tip");
+function showTip(html,ev){tip.innerHTML=html;tip.style.display="block";const r=tip.getBoundingClientRect();let x=ev.clientX+14,y=ev.clientY+14;if(x+r.width>innerWidth-8)x=ev.clientX-r.width-14;if(y+r.height>innerHeight-8)y=ev.clientY-r.height-14;tip.style.left=x+"px";tip.style.top=y+"px"}
+function hideTip(){tip.style.display="none"}
+document.addEventListener("scroll",hideTip,true);
+function breakdown(s){return Object.entries(s).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([k,v])=>`<div class="tl">${esc(k)} · ${dur(v)}</div>`).join("")}
+
+/* ============ charts ============ */
+function heatmap(el,year,subj){
+  const map=byDate(subj);const jan1=new Date(year,0,1),dec31=new Date(year,11,31);
+  const start=weekStart(jan1);const cols=Math.ceil((daysBetween(ymd(start),ymd(dec31))+1)/7);
+  const cs=12,g=3,left=26,top=18;const W=left+cols*(cs+g),Hh=top+7*(cs+g);
+  let s=`<svg width="${W}" height="${Hh}" role="img" aria-label="Daily activity ${year}">`;
+  ["Mon","","Wed","","Fri","",""].forEach((t,i)=>{if(t)s+=`<text x="0" y="${top+i*(cs+g)+cs-2}" fill="var(--text-muted)" font-size="10">${t}</text>`});
+  let lastC=-9;for(let mo=0;mo<12;mo++){const c=Math.floor(daysBetween(ymd(start),ymd(new Date(year,mo,1)))/7);if(c-lastC>=3){s+=`<text x="${left+c*(cs+g)}" y="11" fill="var(--text-muted)" font-size="10">${MONTHS[mo]}</text>`;lastC=c}}
+  for(let c=0;c<cols;c++)for(let r=0;r<7;r++){const d=addDays(start,c*7+r);if(d<jan1||d>dec31)continue;const k=ymd(d);
+    const m=map[k]?map[k].m:0;const lv=m===0?0:m<15?1:m<30?2:m<60?3:m<120?4:5;
+    s+=`<rect data-d="${k}" x="${left+c*(cs+g)}" y="${top+r*(cs+g)}" width="${cs}" height="${cs}" rx="3" fill="var(--h${lv})"/>`}
+  s+="</svg>";el.innerHTML=s;const svg=el.querySelector("svg");
+  const on=e=>{const k=e.target.dataset&&e.target.dataset.d;if(!k)return hideTip();const v=map[k];showTip(`<b>${fmtDate(k)}</b><div>${v?dur(v.m):"No logs"}</div>${v&&subj==="All"?breakdown(v.s):""}`,e)};
+  svg.addEventListener("mousemove",on);svg.addEventListener("mouseleave",hideTip);svg.addEventListener("click",e=>{on(e);setTimeout(hideTip,2500)});
+}
+function niceStep(maxH){for(const s of [.25,.5,1,2,3,5,10,20,25,50,100,200,500])if(maxH/s<=4)return s;return 1000}
+function barChart(el,data){
+  const W=Math.max(280,el.clientWidth||600),Hh=200,pl=34,pr=6,pt=10,pb=24;
+  const maxM=Math.max(...data.map(d=>d.v),1);const step=niceStep(maxM/60);const top=Math.max(step,Math.ceil(maxM/60/step)*step);
+  const iw=W-pl-pr,ih=Hh-pt-pb;const n=data.length;const slot=iw/n;const gap=Math.min(Math.max(slot*.22,2),10);const bw=Math.max(slot-gap,1.5);
+  const y=v=>pt+ih-(v/60)/top*ih;
+  let s=`<svg width="${W}" height="${Hh}" role="img" aria-label="Hours chart"><g class="axis">`;
+  for(let v=0;v<=top+1e-9;v+=step){const yy=y(v*60);s+=`<line class="grid-l" x1="${pl}" x2="${W-pr}" y1="${yy}" y2="${yy}"/><text x="${pl-6}" y="${yy+4}" text-anchor="end">${+v.toFixed(2)}h</text>`}
+  const every=Math.ceil(n/Math.max(1,Math.floor(iw/58)));
+  data.forEach((d,i)=>{if(i%every===0||n<=8)s+=`<text x="${pl+i*slot+slot/2}" y="${Hh-6}" text-anchor="middle">${esc(d.label)}</text>`});
+  s+="</g>";
+  data.forEach((d,i)=>{if(d.v<=0)return;const x=pl+i*slot+gap/2,yy=y(d.v),h=pt+ih-yy;const r=Math.min(4,bw/2,h);
+    s+=`<path d="M${x},${pt+ih} V${yy+r} Q${x},${yy} ${x+r},${yy} H${x+bw-r} Q${x+bw},${yy} ${x+bw},${yy+r} V${pt+ih} Z" fill="var(--series-1)"/>`});
+  data.forEach((d,i)=>{s+=`<rect data-i="${i}" x="${pl+i*slot}" y="${pt}" width="${slot}" height="${ih}" fill="transparent"/>`});
+  s+="</svg>";el.innerHTML=s;const svg=el.querySelector("svg");
+  const on=e=>{const i=e.target.dataset&&e.target.dataset.i;if(i==null)return hideTip();const d=data[+i];showTip(`<b>${esc(d.title||d.label)}</b><div>${d.v?dur(d.v):"Nothing logged"}</div>${d.s?breakdown(d.s):""}`,e)};
+  svg.addEventListener("mousemove",on);svg.addEventListener("click",e=>{on(e);setTimeout(hideTip,2500)});svg.addEventListener("mouseleave",hideTip);
+}
+function rangeData(subj,range){
+  const map=byDate(subj);const now=new Date();const out=[];
+  if(range==="7D"||range==="30D"){const n=range==="7D"?7:30;for(let i=n-1;i>=0;i--){const d=addDays(now,-i),k=ymd(d),v=map[k];out.push({label:n===7?d.toLocaleDateString(undefined,{weekday:"short"}):d.getDate()+" "+MONTHS[d.getMonth()],title:fmtDate(k),v:v?v.m:0,s:subj==="All"&&v?v.s:null})}}
+  else if(range==="1Y"){const ws=weekStart(now);for(let i=51;i>=0;i--){const st=addDays(ws,-7*i);let v=0,s={};for(let j=0;j<7;j++){const e=map[ymd(addDays(st,j))];if(e){v+=e.m;for(const k in e.s)s[k]=(s[k]||0)+e.s[k]}}out.push({label:st.getDate()+" "+MONTHS[st.getMonth()],title:"Week of "+fmtDate(ymd(st)),v,s:subj==="All"?s:null})}}
+  else{const keys=Object.keys(map).sort();if(!keys.length)return out;let d=parseD(keys[0]);d=new Date(d.getFullYear(),d.getMonth(),1);const end=new Date(now.getFullYear(),now.getMonth(),1);const agg={};
+    for(const k in map){const mk=k.slice(0,7);const a=agg[mk]||(agg[mk]={v:0,s:{}});a.v+=map[k].m;for(const x in map[k].s)a.s[x]=(a.s[x]||0)+map[k].s[x]}
+    while(d<=end){const mk=d.getFullYear()+"-"+pad(d.getMonth()+1);const a=agg[mk];out.push({label:MONTHS[d.getMonth()]+" "+String(d.getFullYear()).slice(2),title:MONTHS[d.getMonth()]+" "+d.getFullYear(),v:a?a.v:0,s:subj==="All"&&a?a.s:null});d=new Date(d.getFullYear(),d.getMonth()+1,1)}}
+  return out;
+}
+function ratioBars(rows){const tot=rows.reduce((a,r)=>a+r[1],0)||1;const max=Math.max(...rows.map(r=>r[1]),1);
+  return rows.map(([k,v])=>`<div class="rb"><div>${esc(k)}</div><div class="track"><div class="fill" style="width:${v/max*100}%"></div></div><div class="val num">${H(v)}h · ${Math.round(v/tot*100)}%</div></div>`).join("")||`<div class="muted">Nothing logged in this period.</div>`}
+
+/* ============ views ============ */
+function route(){const h=(location.hash||"#home").slice(1);return ROUTES.some(r=>r[0]===h)?h:"home"}
+function renderNav(){
+  const app=phase==="app";$("#fab").style.display=app&&!readOnly()?"":"none";
+  if(!app){$("#sidenav").innerHTML=`<div class="brand">LOG<b>BOOK</b></div><div class="grow"></div><button class="ghost" data-act="theme">Toggle theme</button>`;$("#bottomnav").innerHTML="";return}
+  const r=route();const links=ROUTES.map(([k,t])=>`<a class="nl ${k===r?"on":""}" href="#${k}">${ICONS[k]}<span>${t}</span></a>`).join("");
+  const sw=sharedWithMe.length?`<select id="viewSel" style="margin:0 4px 14px">${[{id:me,username:myProfile.username+" (me)"},...sharedWithMe].map(p=>`<option value="${p.id}" ${p.id===viewing?"selected":""}>@${esc(p.username)}</option>`).join("")}</select>`:"";
+  $("#sidenav").innerHTML=`<div class="brand">LOG<b>BOOK</b></div>${sw}${links}<div class="grow"></div><div class="muted" style="font-size:13px;padding:0 12px 8px">@${esc(myProfile.username)}</div><button class="ghost" data-act="theme" style="margin-bottom:6px">Toggle theme</button><button class="ghost" data-act="logout">Log out</button>`;
+  $("#bottomnav").innerHTML=links;
+  $("#mswitch").innerHTML=sw?sw.replace('id="viewSel"','id="viewSelM"').replace("margin:0 4px 14px","margin:0"):"";
+}
+function subjOptions(sel,withAll){return (withAll?`<option value="All" ${sel==="All"?"selected":""}>All subjects</option>`:"")+subjects().map(s=>`<option ${s===sel?"selected":""}>${esc(s)}</option>`).join("")}
+function roNote(){return readOnly()?`<div class="banner on" style="border-color:var(--border);background:var(--surface-2)">You're viewing <b>@${esc(viewProfile&&viewProfile.username||"")}</b>'s logbook (read-only).</div>`:""}
+
+function viewHome(){
+  const c=all();const total=c.logs.reduce((a,l)=>a+l.m,0);const map=byDate();const t=map[today()];
+  const ws=weekStart(new Date());let wk=0,lwk=0,wkS={};for(let i=0;i<7;i++){const e=map[ymd(addDays(ws,i))];if(e){wk+=e.m;for(const k in e.s)wkS[k]=(wkS[k]||0)+e.s[k]}const p=map[ymd(addDays(ws,i-7))];if(p)lwk+=p.m}
+  const delta=wk-lwk;const years=[...new Set(c.logs.map(l=>+l.d.slice(0,4)))];if(!years.includes(new Date().getFullYear()))years.push(new Date().getFullYear());years.sort((a,b)=>b-a);
+  if(!c.logs.length)return roNote()+`<h1>Welcome aboard${readOnly()?"":", @"+esc(myProfile.username)}</h1><p class="sub">${readOnly()?"Nothing logged here yet.":"Your logbook is empty."}</p>${readOnly()?"":`<div class="card empty-state"><h2>Bring your history over</h2><p>Coming from Polylogger? Import your CSV once — re-importing never creates duplicates.</p><a class="btn" style="text-decoration:none;display:inline-block" href="#manage">Import Polylogger CSV</a><p class="muted" style="margin-top:14px">Or tap <b>+</b> to log your first session.</p></div>`}`;
+  return roNote()+`<h1>Home</h1><p class="sub">${new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"})}</p>
+  <div class="grid g4" style="margin-bottom:16px">
+   <div class="stat"><div class="k">Hours logged</div><div class="v num">${H(total)}</div><div class="d">${c.logs.length} sessions</div></div>
+   <div class="stat"><div class="k">Streak</div><div class="v num">${streak()}<small>days</small></div><div class="d">${t?"Logged today ✓":"Log today to keep it"}</div></div>
+   <div class="stat"><div class="k">Today</div><div class="v num">${t?H(t.m):"0.0"}<small>h</small></div><div class="d">${t?esc(Object.keys(t.s).join(", ")):"—"}</div></div>
+   <div class="stat"><div class="k">This week</div><div class="v num">${H(wk)}<small>h</small></div><div class="d ${delta>=0?"delta-up":"delta-down"}">${delta>=0?"▲":"▼"} ${H(Math.abs(delta))} h vs last week</div></div>
+  </div>
+  <div class="card"><div class="head"><div><h2>Year in review</h2><p class="sub">Daily activity — hover or tap a day.</p></div>
+   <div class="row"><select id="hmSubj">${subjOptions(ui.hmSubj,true)}</select><select id="hmYear">${years.map(y=>`<option ${y===ui.hmYear?"selected":""}>${y}</option>`).join("")}</select></div></div>
+   <div class="hm-wrap" id="hm"></div>
+   <div class="hm-legend">Less <i style="background:var(--h0)"></i><i style="background:var(--h1)"></i><i style="background:var(--h2)"></i><i style="background:var(--h3)"></i><i style="background:var(--h4)"></i><i style="background:var(--h5)"></i> More <span style="margin-left:8px">(&lt;15m · 30m · 1h · 2h+)</span></div></div>
+  <div class="grid g2">
+   <div class="card"><h2>Weekly review</h2><p class="sub">Monday to today, by subject.</p>${ratioBars(Object.entries(wkS).sort((a,b)=>b[1]-a[1]))}</div>
+   <div class="card"><div class="head"><div><h2>Recent logs</h2></div><a href="#logs" style="font-size:13.5px">All logs →</a></div>${c.logs.slice(0,6).map(logRow).join("")}</div>
+  </div>`;
+}
+function afterHome(){const el=$("#hm");if(el){heatmap(el,ui.hmYear,ui.hmSubj);el.scrollLeft=el.scrollWidth}}
+
+function viewStats(){
+  if(!ui.statSubj)ui.statSubj=focus();const s=ui.statSubj;const c=all();
+  const logs=s==="All"?c.logs:c.logs.filter(l=>l.s===s);const tot=logs.reduce((a,l)=>a+l.m,0);
+  const first=logs.length?logs[logs.length-1].d:null;const days=first?daysBetween(first,today())+1:0;
+  const rd=rangeData(s,ui.range);const rtot=rd.reduce((a,d)=>a+d.v,0);
+  const cut={"7D":ymd(addDays(new Date(),-6)),"30D":ymd(addDays(new Date(),-29)),"1Y":ymd(addDays(weekStart(new Date()),-51*7)),"ALL":"0000"}[ui.range];
+  const typ={},sub={};for(const l of logs){if(l.d<cut)continue;typ[l.t]=(typ[l.t]||0)+l.m;sub[l.s]=(sub[l.s]||0)+l.m}
+  return roNote()+`<h1>Stats</h1><p class="sub">Totals, averages and how the time splits.</p>
+  <div class="row" style="margin-bottom:14px"><select id="statSubj">${subjOptions(s,true)}</select></div>
+  <div class="grid g4" style="margin-bottom:16px">
+   <div class="stat"><div class="k">Total hours</div><div class="v num">${(tot/60).toFixed(2)}</div></div>
+   <div class="stat"><div class="k">Daily average</div><div class="v num">${days?(tot/60/days).toFixed(2):"0.00"}<small>h</small></div></div>
+   <div class="stat"><div class="k">Start date</div><div class="v num" style="font-size:20px;padding-top:5px">${first?parseD(first).toLocaleDateString():"—"}</div></div>
+   <div class="stat"><div class="k">Sessions</div><div class="v num">${logs.length}</div></div>
+  </div>
+  <div class="card"><div class="head"><div><h2>${{"7D":"Last 7 days","30D":"Last 30 days","1Y":"Last 12 months (weekly)","ALL":"All time (monthly)"}[ui.range]}</h2><p class="sub"><span class="num">${H(rtot)}</span> h in this period · ${dur(Math.round(rtot/Math.max(1,rd.length)))} per ${ui.range==="1Y"?"week":ui.range==="ALL"?"month":"day"} on average</p></div>
+   <div class="seg">${["7D","30D","1Y","ALL"].map(r=>`<button class="${r===ui.range?"on":""}" data-r="${r}">${r}</button>`).join("")}</div></div>
+   <div class="chart" id="bars"></div></div>
+  <div class="grid ${s==="All"?"g2":""}">
+   <div class="card"><h2>Ratio by type</h2><p class="sub">Same period as the chart.</p>${ratioBars(Object.entries(typ).sort((a,b)=>b[1]-a[1]))}</div>
+   ${s==="All"?`<div class="card"><h2>By subject</h2><p class="sub">Same period as the chart.</p>${ratioBars(Object.entries(sub).sort((a,b)=>b[1]-a[1]))}</div>`:""}
+  </div>`;
+}
+function afterStats(){const el=$("#bars");if(el)barChart(el,rangeData(ui.statSubj,ui.range))}
+
+function logRow(l){const auto=!MANUAL_SRC.includes(l.src);const ro=readOnly();
+  return `<div class="log"><div class="main"><div class="act ${l.a?"":"empty"}">${l.a?esc(l.a):"No description"}${auto?`<span class="auto">${esc(l.src)}</span>`:""}</div><div class="meta">${esc(l.s)} · ${esc(l.t)}</div></div><div class="min num">${l.m} min</div>${ro?"":`<button class="ib" data-edit="${l.i}" title="Edit">${ICONS.edit}</button><button class="ib" data-del="${l.i}" title="Delete">${ICONS.del}</button>`}</div>`}
+function viewLogs(){
+  const q=ui.logQ.toLowerCase();const list=all().logs.filter(l=>(ui.logSubj==="All"||l.s===ui.logSubj)&&(ui.logType==="All"||l.t===ui.logType)&&(!q||(l.a||"").toLowerCase().includes(q)));
+  const shown=list.slice(0,ui.logLimit);let html="",cur=null,dayTot={};for(const l of list)dayTot[l.d]=(dayTot[l.d]||0)+l.m;
+  for(const l of shown){if(l.d!==cur){if(cur)html+="</div>";cur=l.d;html+=`<div class="day"><h3><span>${fmtDate(l.d)}</span><span class="num">${dur(dayTot[l.d])}</span></h3>`}html+=logRow(l)}
+  if(cur)html+="</div>";
+  return roNote()+`<h1>Logs</h1><p class="sub">${list.length} sessions · <span class="num">${H(list.reduce((a,l)=>a+l.m,0))}</span> h</p>
+  <div class="row"><input type="search" id="logQ" placeholder="Search activity…" value="${esc(ui.logQ)}" style="flex:1;min-width:180px"><select id="logSubj">${subjOptions(ui.logSubj,true)}</select><select id="logType"><option value="All">All types</option>${types().map(t=>`<option ${t===ui.logType?"selected":""}>${esc(t)}</option>`).join("")}</select></div>
+  <div>${html||'<div class="empty-state">No logs match.</div>'}</div>
+  ${list.length>ui.logLimit?`<div style="text-align:center;margin-top:16px"><button class="btn sec" data-act="more">Show more (${list.length-ui.logLimit} left)</button></div>`:""}`;
+}
+
+let importState=null;
+function viewManage(){
+  if(readOnly())return roNote()+`<h1>Setup</h1><div class="card empty-state"><p>Switch back to your own logbook to change settings.</p><button class="btn" data-act="viewMe">Back to my logbook</button></div>`;
+  const subs=subjects();const pinned=settings().subjects||[];const c=all();
+  return `<h1>Setup</h1><p class="sub">Subjects, sharing, connections, import and export.</p>
+  <div class="card"><h2>Focus subject</h2><p class="sub">Opens first in Stats and in the add-log form.</p>
+   <div class="row"><select id="focusSel">${subs.map(s=>`<option ${s===focus()?"selected":""}>${esc(s)}</option>`).join("")}</select><button class="btn" data-act="saveFocus">Save focus</button></div></div>
+  <div class="card"><h2>Subjects</h2><p class="sub">Languages and anything else you track (aviation, programming…). Subjects with logs appear automatically.</p>
+   <div class="chips" style="margin-bottom:12px">${subs.map(s=>`<span class="chip">${esc(s)} <span class="muted num" style="font-size:12px">${H(c.subjMin[s]||0)}h</span>${pinned.includes(s)&&!c.subjMin[s]?`<button data-unpin="${esc(s)}" title="Remove">×</button>`:'<span style="width:6px"></span>'}</span>`).join("")}</div>
+   <div class="row"><select id="addLang"><option value="">Add a language…</option>${LANGS.filter(l=>!subs.includes(l)).map(l=>`<option>${l}</option>`).join("")}</select><input type="text" id="addOther" placeholder="…or anything else (e.g. Networking)"><button class="btn sec" data-act="addSubj">Add</button></div></div>
+  <div class="card"><h2>Activity types</h2><p class="sub">The eight standard types, plus your own (e.g. Simulator, Class, Coding).</p>
+   <div class="chips" style="margin-bottom:12px">${BASE_TYPES.map(t=>`<span class="chip" style="padding-right:12px">${t}</span>`).join("")}${(settings().types||[]).map(t=>`<span class="chip">${esc(t)}<button data-untype="${esc(t)}">×</button></span>`).join("")}</div>
+   <div class="row"><input type="text" id="newType" placeholder="New type"><button class="btn sec" data-act="addType">Add type</button></div></div>
+  <div class="card"><h2>Sharing</h2><p class="sub">People you share with can see your logbook (read-only). Nobody else can.</p>
+   <div class="chips" style="margin-bottom:12px">${myShares.map(p=>`<span class="chip">@${esc(p.username)}<button data-unshare="${p.id}" title="Stop sharing">×</button></span>`).join("")||'<span class="muted">Not shared with anyone.</span>'}</div>
+   <div class="row"><input type="text" id="shareUser" placeholder="Their username"><button class="btn sec" data-act="share">Share</button></div>
+   ${sharedWithMe.length?`<p class="sub" style="margin:14px 0 6px">Shared with you: ${sharedWithMe.map(p=>"@"+esc(p.username)).join(", ")} — switch logbooks from the menu.</p>`:""}</div>
+  <div class="card"><h2>Connections</h2><p class="sub">Tokens let your trackers (Anki add-on, YouTube extension, Spotify sync) add logs automatically. Treat a token like a password; delete it to disconnect that tracker.</p>
+   ${tokens.map(t=>`<div class="log"><div class="main"><div class="act">${esc(t.name)}</div><div class="meta num">${esc(t.token.slice(0,6))}…${esc(t.token.slice(-4))}</div></div><button class="btn sec" data-copytok="${esc(t.token)}">Copy</button><button class="ib" data-deltok="${esc(t.token)}" title="Delete">${ICONS.del}</button></div>`).join("")||'<p class="muted">No connections yet.</p>'}
+   <div class="row" style="margin-top:10px"><input type="text" id="tokName" placeholder="Name (e.g. Anki on PC)"><button class="btn sec" data-act="newToken">Create token</button></div></div>
+  <div class="card"><h2>Import from Polylogger</h2><p class="sub">Pick your exported CSV. Rows already in your logbook are skipped, so importing again is safe.</p>
+   <input type="file" id="csvFile" accept=".csv,text/csv"><div id="importBox"></div></div>
+  <div class="card"><h2>Export</h2><p class="sub">All logs as CSV (same columns as Polylogger).</p><div class="row"><button class="btn sec" data-act="export">Copy CSV</button><button class="btn sec" data-act="download">Download CSV</button></div><textarea id="exportBox" style="display:none;width:100%;height:120px;margin-top:10px"></textarea></div>
+  <div class="card"><h2>Account</h2><p class="sub">Signed in as <b>@${esc(myProfile.username)}</b>.</p><button class="btn sec" data-act="logout">Log out</button></div>`;
+}
+function renderImportBox(){
+  const box=$("#importBox");if(!box||!importState)return;const st=importState;
+  if(st.done){box.innerHTML=`<p style="margin-top:12px">✓ Imported <b>${st.added}</b> logs${st.skipped?` · skipped ${st.skipped} already present`:""}.</p>`;return}
+  if(st.progress!=null){box.innerHTML=`<p style="margin-top:12px">Saving… ${st.progress}/${st.total}</p>`;return}
+  box.innerHTML=`<p style="margin-top:12px"><b>${st.rows.length}</b> rows found. Rename subjects before importing if you like:</p>
+  <table class="map"><tr><th>In CSV</th><th>Rows</th><th>Hours</th><th>Import as</th></tr>${st.langs.map((l,i)=>`<tr><td>${esc(l.name)}</td><td class="num">${l.n}</td><td class="num">${H(l.m)}</td><td><input type="text" data-map="${i}" value="${esc(l.to)}"></td></tr>`).join("")}</table>
+  <button class="btn" data-act="doImport">Import ${st.rows.length} logs</button>`;
+}
+function parseCSV(t){const rows=[];let row=[],f="",q=false;t=t.replace(/^﻿/,"");
+  for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=ch}else if(ch==='"')q=true;else if(ch===","){row.push(f);f=""}else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&t[i+1]==="\n")i++;row.push(f);rows.push(row);row=[];f=""}else f+=ch}
+  if(f||row.length){row.push(f);rows.push(row)}return rows.filter(r=>r.some(x=>x.trim()))}
+async function handleCSV(file){
+  const rows=parseCSV(await file.text());if(!rows.length)return toast("That file is empty.");const h=rows.shift().map(x=>x.trim().toLowerCase());
+  const iA=h.findIndex(x=>x.startsWith("activity")&&!x.includes("type")),iL=h.findIndex(x=>x.startsWith("language")),iT=h.findIndex(x=>x.includes("type")),iM=h.findIndex(x=>x.includes("minute")),iD=h.findIndex(x=>x.startsWith("date"));
+  if([iL,iT,iM,iD].some(x=>x<0))return toast("That doesn't look like a Polylogger CSV.");
+  const out=[];const lang={};
+  for(const r of rows){const d=(r[iD]||"").trim(),m=parseInt(r[iM],10);if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!(m>0))continue;const L=(r[iL]||"").trim()||"Other";
+    out.push({a:iA>=0?(r[iA]||"").trim():"",L,t:(r[iT]||"").trim()||"Mixed",m:Math.min(m,1440),d});const e=lang[L]||(lang[L]={name:L,n:0,m:0,to:IMPORT_REMAP[L]||L});e.n++;e.m+=m}
+  importState={rows:out,langs:Object.values(lang).sort((a,b)=>b.m-a.m)};renderImportBox();
+}
+async function doImport(){
+  const st=importState;document.querySelectorAll("[data-map]").forEach(inp=>{const l=st.langs[+inp.dataset.map];l.to=inp.value.trim()||l.name});
+  const to={};st.langs.forEach(l=>to[l.name]=l.to);
+  const sig=(d,s,t,m,a)=>[d,s,t,m,(a||"").toLowerCase()].join("|");const have={};for(const l of all().logs){const k=sig(l.d,l.s,l.t,l.m,l.a);have[k]=(have[k]||0)+1}
+  const rows=[];let skipped=0;
+  for(const r of st.rows){const s=to[r.L];const k=sig(r.d,s,r.t,r.m,r.a);if(have[k]){have[k]--;skipped++;continue}rows.push({d:r.d,subject:s,type:r.t,minutes:r.m,activity:r.a.slice(0,300),src:"polylogger"})}
+  st.total=rows.length;st.progress=0;renderImportBox();
+  for(let i=0;i<rows.length;i+=400){const chunk=rows.slice(i,i+400);const {error}=await sb.from("logs").insert(chunk);if(error){fail(error,"Import stopped: "+error.message);st.progress=null;await refresh();return}st.progress=Math.min(rows.length,i+400);renderImportBox()}
+  st.done=true;st.added=rows.length;st.skipped=skipped;await loadLogs();render();toast(`Imported ${rows.length} logs`);
+}
+function csvText(){const q=v=>/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
+  return "Activity,Language,Activity Type,Time (minutes),Date\n"+all().logs.map(l=>[q(l.a||""),q(l.s),q(l.t),l.m,l.d].join(",")).join("\n")}
+
+/* ============ auth views ============ */
+function viewAuth(){
+  if(phase==="config")return `<div class="card" style="max-width:460px;margin:40px auto"><h2>Not configured yet</h2><p class="sub">The Supabase project URL hasn't been filled in.</p></div>`;
+  if(phase==="recovery")return `<div class="card" style="max-width:420px;margin:40px auto"><h1>New password</h1><p class="sub">Choose a new password for your account.</p>
+   <form id="recForm"><div class="field"><label>New password</label><input type="password" id="newPw" minlength="8" required autocomplete="new-password"></div><button class="btn" style="width:100%">Save password</button></form><p class="sub" style="margin-top:12px">${esc(authMsg)}</p></div>`;
+  if(phase==="username")return `<div class="card" style="max-width:420px;margin:40px auto"><h1>Pick a username</h1><p class="sub">Others use it to share with you. Lowercase letters, numbers and _ (3–20).</p>
+   <form id="userForm"><div class="field"><input type="text" id="uname" pattern="[a-z0-9_]{3,20}" required autocapitalize="none" autocomplete="username"></div><button class="btn" style="width:100%">Continue</button></form><p class="sub" style="margin-top:12px;color:var(--danger)">${esc(authMsg)}</p></div>`;
+  return `<div class="card" style="max-width:420px;margin:40px auto"><div class="brand" style="padding:0 0 14px">LOG<b>BOOK</b></div><h1>Sign in</h1><p class="sub">Your study time, on every device.</p>
+   <form id="authForm"><div class="field"><label>Email</label><input type="email" id="email" required autocomplete="email"></div>
+   <div class="field"><label>Password</label><input type="password" id="pw" minlength="8" required autocomplete="current-password"></div>
+   <div class="row"><button class="btn" style="flex:1" data-mode="in">Sign in</button><button class="btn sec" style="flex:1" type="button" data-act="signup">Create account</button></div></form>
+   <p style="margin:14px 0 0;font-size:13.5px"><a href="#" data-act="forgot">Forgot password?</a></p><p class="sub" style="margin-top:12px">${esc(authMsg)}</p></div>`;
+}
+
+/* ============ add / edit modal ============ */
+let modalState=null;
+function openModal(entry){
+  if(readOnly())return;const t=timer;const def=entry||{a:"",s:focus(),t:"Listening",m:30,d:today()};
+  modalState={entry,mode:entry?"manual":(t?t.mode:"manual"),timerMin:25};
+  const subs=subjects();const list=[...subs,...LANGS.filter(l=>!subs.includes(l))];const cur=t&&!entry?t:{a:def.a,s:def.s,t:def.t};
+  $("#modal").innerHTML=`<div class="row" style="margin-bottom:4px"><h2 style="font-size:19px">${entry?"Edit log":"Add a log"}</h2><span class="spacer"></span><button class="ib" data-act="close" aria-label="Close" style="font-size:20px">×</button></div>
+  <p class="sub">${entry?"Change anything and save.":"Log your latest session."}</p>
+  ${entry?"":`<div class="seg" id="modeSeg" style="width:100%;margin-bottom:14px">${["manual","stopwatch","timer"].map(m=>`<button style="flex:1" data-mode="${m}">${m[0].toUpperCase()+m.slice(1)}</button>`).join("")}</div>`}
+  <div class="field"><label>Activity (optional)</label><input type="text" id="fA" maxlength="300" placeholder="What did you do?" value="${esc(cur.a)}"></div>
+  <div class="two"><div class="field"><label>Subject</label><select id="fS">${list.map((s,i)=>`${i===subs.length&&subs.length?'<option disabled>──────────</option>':""}<option ${s===cur.s?"selected":""}>${esc(s)}</option>`).join("")}<option disabled>──────────</option><option value="__other">Other…</option></select><input type="text" id="fSo" placeholder="New subject name" maxlength="60" style="display:none"></div>
+  <div class="field"><label>Type</label><select id="fT">${types().map(x=>`<option ${x===cur.t?"selected":""}>${esc(x)}</option>`).join("")}</select></div></div>
+  <div id="modeBody"></div>`;
+  $("#fS").addEventListener("change",e=>{$("#fSo").style.display=e.target.value==="__other"?"block":"none";if(e.target.value==="__other")$("#fSo").focus()});
+  renderModeBody(def);$("#scrim").classList.add("open");
+}
+function renderModeBody(def){
+  const m=modalState.mode;document.querySelectorAll("#modeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.mode===m));
+  const b=$("#modeBody");const t=timer;
+  if(m==="manual"){b.innerHTML=`<div class="two"><div class="field"><label>Date</label><input type="date" id="fD" value="${def?def.d:today()}" max="${today()}"></div><div class="field"><label>Minutes</label><input type="number" id="fM" min="1" max="1440" value="${def?def.m:30}" inputmode="numeric"></div></div>
+   <div class="row" style="justify-content:flex-end;margin-top:6px"><button class="btn sec" data-act="close">Cancel</button><button class="btn" data-act="saveManual">Save log</button></div>`}
+  else if(!t||t.mode!==m){b.innerHTML=(m==="timer"?`<div class="field"><label>Duration (minutes)</label><input type="number" id="fTm" min="1" value="${modalState.timerMin}"></div>`:`<p class="muted" style="margin:4px 0 12px">Runs on all your devices — start on your phone, stop on your computer.</p>`)+
+   (t?`<p class="muted">A ${t.mode} is already running — stop it first.</p>`:`<div class="row" style="justify-content:flex-end"><button class="btn" data-act="startClock">Start ${m}</button></div>`)}
+  else{b.innerHTML=`<div class="clock" id="mClock">00:00:00</div><div class="row" style="justify-content:center;margin-bottom:6px"><button class="btn sec" data-act="${t.running?"pause":"resume"}">${t.running?"Pause":"Resume"}</button><button class="btn" data-act="stopSave">Stop & save</button><button class="btn sec" data-act="discard">Discard</button></div>`;tick()}
+}
+function readForm(){
+  let s=$("#fS").value;if(s==="__other"){s=$("#fSo").value.trim();if(!s){toast("Type a subject name");return null}if(!(settings().subjects||[]).includes(s))saveSettings({subjects:[...(settings().subjects||[]),s]})}
+  return {a:$("#fA").value.trim(),s,t:$("#fT").value};
+}
+function closeModal(){$("#scrim").classList.remove("open");modalState=null}
+function elapsedMs(t){return (t.acc||0)+(t.running?Date.now()-t.start:0)}
+function clockText(ms){ms=Math.max(0,ms);const s=Math.floor(ms/1000);return pad(Math.floor(s/3600))+":"+pad(Math.floor(s/60)%60)+":"+pad(s%60)}
+let beeped=false,actx=null;
+function tick(){
+  if(!timer)return;const el=elapsedMs(timer);const show=timer.mode==="timer"?timer.dur-el:el;const txt=clockText(show);
+  const c=$("#mClock");if(c)c.textContent=txt;const bc=$("#bClock");if(bc)bc.textContent=txt;
+  if(timer.mode==="timer"&&show<=0&&timer.running&&!beeped){beeped=true;try{if(actx){const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=880;o.connect(g);g.connect(actx.destination);g.gain.setValueAtTime(.2,actx.currentTime);o.start();o.stop(actx.currentTime+.6)}}catch(e){}toast("Timer finished — save your log",5000);renderBanner()}
+}
+setInterval(tick,500);
+function renderBanner(){
+  const b=$("#banner");if(!timer||readOnly()||phase!=="app"){b.classList.remove("on");b.innerHTML="";return}
+  const done=timer.mode==="timer"&&elapsedMs(timer)>=timer.dur;
+  b.classList.add("on");b.innerHTML=`${timer.running&&!done?'<span class="dot"></span>':""}<b>${done?"Timer finished":timer.mode==="timer"?"Timer":"Stopwatch"}</b><span class="num" id="bClock"></span><span class="muted">${esc(timer.s)} · ${esc(timer.t)}${timer.a?" · "+esc(timer.a):""}</span><span class="spacer"></span>
+  ${done?"":`<button class="btn sec" data-act="${timer.running?"pause":"resume"}">${timer.running?"Pause":"Resume"}</button>`}<button class="btn" data-act="stopSave">Stop & save</button>`;tick();
+}
+function stopSave(){
+  const t=timer;if(!t)return;let ms=elapsedMs(t);if(t.mode==="timer")ms=Math.min(ms,t.dur);
+  const fields=modalState&&$("#fA")?readForm():{a:t.a,s:t.s,t:t.t};if(!fields)return;
+  const m=Math.max(1,Math.min(1440,Math.round(ms/60000)));const e={...fields,m,d:ymd(new Date(t.start0||Date.now())),src:t.mode};
+  saveLog(e);saveTimer(null);beeped=false;closeModal();toast(`Saved ${m} min of ${e.s}`);
+}
+
+/* ============ events ============ */
+document.addEventListener("click",async e=>{
+  const a=e.target.closest("[data-act],[data-edit],[data-del],[data-mode],[data-r],[data-unpin],[data-untype],[data-unshare],[data-copytok],[data-deltok]");if(!a)return;
+  if(a.dataset.edit){const l=all().logs.find(x=>x.i===a.dataset.edit);if(l)openModal(l);return}
+  if(a.dataset.del){if(a.classList.contains("confirm")){const l=all().logs.find(x=>x.i===a.dataset.del);if(l){deleteLog(l);toast("Log deleted")}return}a.classList.add("confirm");a.textContent="Delete?";setTimeout(()=>{if(a.isConnected){a.classList.remove("confirm");a.innerHTML=ICONS.del}},3000);return}
+  if(a.dataset.mode&&modalState){modalState.mode=a.dataset.mode;renderModeBody(null);return}
+  if(a.dataset.r){ui.range=a.dataset.r;render();return}
+  if(a.dataset.unpin){saveSettings({subjects:(settings().subjects||[]).filter(s=>s!==a.dataset.unpin)});return}
+  if(a.dataset.untype){saveSettings({types:(settings().types||[]).filter(s=>s!==a.dataset.untype)});return}
+  if(a.dataset.unshare){const {error}=await sb.from("shares").delete().eq("owner",me).eq("viewer",a.dataset.unshare);if(error)return fail(error);await loadShares();render();toast("Stopped sharing");return}
+  if(a.dataset.copytok){navigator.clipboard.writeText(a.dataset.copytok).then(()=>toast("Token copied")).catch(()=>toast("Couldn't copy"));return}
+  if(a.dataset.deltok){if(!a.classList.contains("confirm")){a.classList.add("confirm");a.textContent="Delete?";return}const {error}=await sb.from("ingest_tokens").delete().eq("token",a.dataset.deltok);if(error)return fail(error);await loadTokens();render();toast("Connection removed");return}
+  const act=a.dataset.act;
+  if(act==="close")closeModal();
+  else if(act==="theme"){const cur=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");const nx=cur==="light"?"dark":"light";document.documentElement.dataset.theme=nx;try{localStorage.setItem("lb-theme",nx)}catch(_){}render()}
+  else if(act==="saveManual"){const f=readForm();if(!f)return;const m=parseInt($("#fM").value,10),d=$("#fD").value;if(!(m>0&&m<=1440)||!/^\d{4}-\d{2}-\d{2}$/.test(d))return toast("Check date and minutes (1–1440)");
+    const old=modalState.entry;const en={...f,m,d,src:old?old.src:"manual"};closeModal();await saveLog(en,old);toast(old?"Log updated":`Logged ${m} min of ${en.s}`)}
+  else if(act==="startClock"){const f=readForm();if(!f)return;let du=0;if(modalState.mode==="timer"){const mm=parseInt($("#fTm").value,10);if(!(mm>0))return toast("Set a duration");du=mm*60000;modalState.timerMin=mm}
+    try{actx=actx||new (window.AudioContext||window.webkitAudioContext)()}catch(_){}beeped=false;
+    const mode=modalState.mode;await saveTimer({mode,...f,start:Date.now(),start0:Date.now(),acc:0,running:true,dur:du});if(modalState)renderModeBody(null)}
+  else if(act==="pause"&&timer){await saveTimer({...timer,acc:elapsedMs(timer),running:false});if(modalState)renderModeBody(null)}
+  else if(act==="resume"&&timer){await saveTimer({...timer,start:Date.now(),running:true});if(modalState)renderModeBody(null)}
+  else if(act==="stopSave")stopSave();
+  else if(act==="discard"){saveTimer(null);closeModal();toast("Discarded")}
+  else if(act==="more"){ui.logLimit+=300;render()}
+  else if(act==="saveFocus"){saveSettings({focus:$("#focusSel").value});ui.statSubj=null;toast("Focus saved")}
+  else if(act==="addSubj"){const v=($("#addOther").value.trim()||$("#addLang").value).slice(0,60);if(!v)return;if(!(settings().subjects||[]).includes(v))saveSettings({subjects:[...(settings().subjects||[]),v]});toast("Added "+v)}
+  else if(act==="addType"){const v=$("#newType").value.trim().slice(0,40);if(!v||types().includes(v))return;saveSettings({types:[...(settings().types||[]),v]})}
+  else if(act==="share"){const u=$("#shareUser").value.trim().toLowerCase().replace(/^@/,"");if(!u)return;if(u===myProfile.username)return toast("That's you");
+    const {data,error}=await sb.rpc("find_user",{p_username:u});if(error)return fail(error);if(!data)return toast("No user called @"+u);
+    const r=await sb.from("shares").insert({owner:me,viewer:data});if(r.error&&r.error.code!=="23505")return fail(r.error);await loadShares();render();toast("Shared with @"+u)}
+  else if(act==="newToken"){const name=($("#tokName").value.trim()||"Tracker").slice(0,40);const {error}=await sb.from("ingest_tokens").insert({user_id:me,name});if(error)return fail(error);await loadTokens();render();toast("Token created — copy it into your tracker")}
+  else if(act==="doImport")doImport();
+  else if(act==="export"){const box=$("#exportBox");box.value=csvText();box.style.display="block";navigator.clipboard.writeText(box.value).then(()=>toast("CSV copied")).catch(()=>{box.select();toast("Select the text below and copy it")})}
+  else if(act==="download"){const blob=new Blob([csvText()],{type:"text/csv"});const u=URL.createObjectURL(blob);const l=document.createElement("a");l.href=u;l.download="logbook-"+today()+".csv";document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),2000)}
+  else if(act==="viewMe")switchView(me);
+  else if(act==="logout"){await sb.auth.signOut();}
+  else if(act==="signup"){const email=$("#email").value.trim(),pw=$("#pw").value;if(!email||pw.length<8){authMsg="Enter your email and a password of at least 8 characters.";return render()}
+    const {data,error}=await sb.auth.signUp({email,password:pw,options:{emailRedirectTo:location.origin+location.pathname}});
+    authMsg=error?error.message:data.session?"":"Check your email and click the confirmation link, then sign in.";render()}
+  else if(act==="forgot"){e.preventDefault();const email=($("#email")||{}).value;if(!email){authMsg="Type your email above first.";return render()}
+    const {error}=await sb.auth.resetPasswordForEmail(email.trim(),{redirectTo:location.origin+location.pathname});authMsg=error?error.message:"If that email has an account, a reset link is on its way.";render()}
+});
+document.addEventListener("submit",async e=>{
+  e.preventDefault();const id=e.target.id;
+  if(id==="authForm"){const {error}=await sb.auth.signInWithPassword({email:$("#email").value.trim(),password:$("#pw").value});if(error){authMsg=error.message==="Invalid login credentials"?"Wrong email or password.":error.message;render()}}
+  else if(id==="userForm"){const u=$("#uname").value.trim().toLowerCase();const {error}=await sb.from("profiles").upsert({id:me,username:u});
+    if(error){authMsg=error.code==="23505"?"That username is taken.":error.message;return render()}authMsg="";await startApp()}
+  else if(id==="recForm"){const {error}=await sb.auth.updateUser({password:$("#newPw").value});if(error){authMsg=error.message;return render()}toast("Password updated");history.replaceState(null,"",location.pathname);await afterLogin()}
+});
+$("#fab").addEventListener("click",()=>openModal(null));
+$("#scrim").addEventListener("click",e=>{if(e.target.id==="scrim")closeModal()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
+document.addEventListener("change",e=>{
+  const id=e.target.id;
+  if(id==="hmSubj"){ui.hmSubj=e.target.value;afterHome()}
+  else if(id==="hmYear"){ui.hmYear=+e.target.value;afterHome()}
+  else if(id==="statSubj"){ui.statSubj=e.target.value;render()}
+  else if(id==="logSubj"){ui.logSubj=e.target.value;ui.logLimit=150;render()}
+  else if(id==="logType"){ui.logType=e.target.value;ui.logLimit=150;render()}
+  else if(id==="viewSel"||id==="viewSelM")switchView(e.target.value);
+  else if(id==="csvFile"&&e.target.files[0]){const f=e.target.files[0];e.target.value="";handleCSV(f)}
+});
+let qT;document.addEventListener("input",e=>{if(e.target.id==="logQ"){ui.logQ=e.target.value;clearTimeout(qT);qT=setTimeout(()=>{render();const i=$("#logQ");if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}},250)}});
+addEventListener("hashchange",()=>{window.scrollTo(0,0);render()});
+let rT;addEventListener("resize",()=>{clearTimeout(rT);rT=setTimeout(()=>{if(phase==="app"&&route()==="stats")afterStats()},150)});
+let hiddenAt=0;
+document.addEventListener("visibilitychange",()=>{if(phase!=="app")return;if(document.hidden){hiddenAt=Date.now();return}loadTimer();if(Date.now()-hiddenAt>30000)refresh()});
+setInterval(()=>{if(phase==="app"&&!document.hidden)loadTimer()},20000);
+
+/* ============ boot ============ */
+async function switchView(id){
+  viewing=id;ui.statSubj=null;ui.hmSubj="All";ui.logSubj="All";logsArr=[];invalidate();
+  viewProfile=id===me?myProfile:(await loadProfile(id))||{username:"?",subjects:[],types:[]};
+  $("#view").innerHTML='<div class="empty-state">Loading…</div>';renderNav();renderBanner();
+  try{await loadLogs()}catch(e){fail(e,"Couldn't load that logbook")}render();
+}
+async function startApp(){
+  myProfile=await loadProfile(me);viewing=me;viewProfile=myProfile;phase="app";
+  $("#view").innerHTML='<div class="empty-state">Loading your logbook…</div>';
+  await Promise.all([loadLogs().catch(e=>fail(e,"Couldn't load your logs")),loadShares().catch(console.error),loadTokens(),loadTimer()]);
+  render();
+}
+async function afterLogin(){
+  const p=await loadProfile(me).catch(e=>{fail(e);return null});
+  if(!p||!p.username){phase="username";authMsg="";return render()}
+  await startApp();
+}
+function render(){
+  renderNav();const v=$("#view");
+  if(phase==="boot"){v.innerHTML='<div class="empty-state">Loading…</div>';return}
+  if(phase!=="app"){v.innerHTML=viewAuth();renderBanner();return}
+  const r=route();
+  if(r==="manage"&&$("#importBox")&&importState&&!importState.done){renderImportBox();return}
+  v.innerHTML=r==="stats"?viewStats():r==="logs"?viewLogs():r==="manage"?viewManage():viewHome();
+  if(r==="home")afterHome();if(r==="stats")afterStats();if(r==="manage")renderImportBox();
+}
+try{const th=localStorage.getItem("lb-theme");if(th)document.documentElement.dataset.theme=th}catch(_){}
+(async()=>{
+  render();
+  if(SUPABASE_URL.startsWith("__")||!window.supabase){phase="config";return render()}
+  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  let recovering=false;
+  sb.auth.onAuthStateChange((event,session)=>{
+    setTimeout(async()=>{
+      if(event==="PASSWORD_RECOVERY"){recovering=true;me=session.user.id;phase="recovery";authMsg="";return render()}
+      if(event==="SIGNED_OUT"){me=null;myProfile=null;viewing=null;logsArr=[];timer=null;invalidate();phase="auth";authMsg="";return render()}
+      if(event==="SIGNED_IN"&&session&&!recovering&&me!==session.user.id){me=session.user.id;await afterLogin()}
+    },0);
+  });
+  const {data:{session}}=await sb.auth.getSession();
+  if(recovering)return;
+  if(session){if(me!==session.user.id){me=session.user.id;await afterLogin()}}
+  else if(phase==="boot"){phase="auth";render()}
+})();
+
+</script>
+</body>
+</html>
