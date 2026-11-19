@@ -19,6 +19,7 @@ const Focus=(()=>{
     x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
     imm:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 15l5-4 4 3 3-2 6 4"/></svg>',
     clean:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M12 5v14"/></svg>',
+    cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
     next:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l7 6-7 6M17 6v12"/></svg>'};
 
   const DEF={scene:"matcha",timer:"classic",custom:{f:30,s:5,l:15,r:4},ambient:null,bell:null,breakBell:null,vol:.6,muted:false,
@@ -30,7 +31,7 @@ const Focus=(()=>{
   function save(){try{localStorage.setItem(LS,JSON.stringify({...cfg,_st:st}))}catch(_){}}
   function T(){return cfg.timer==="custom"?{n:"Custom",...cfg.custom}:TIMERS[cfg.timer]||TIMERS.classic}
   function mins(ph){const t=T();return ph==="focus"?t.f:ph==="short"?t.s:t.l}
-  function fresh(ph,round){return {phase:ph,round,running:false,endAt:0,remain:mins(ph)*60000,startedAt:null}}
+  function fresh(ph,round){return {phase:ph,round,running:false,endAt:0,remain:mins(ph)*60000,startedAt:null,segs:[]}}
   function scene(){return Scenes[cfg.scene]||Scenes.matcha}
   function ambient(){return cfg.ambient||scene().ambient}
   function bell(){return cfg.bell||scene().bell}
@@ -43,17 +44,29 @@ const Focus=(()=>{
   const PH={focus:"Focus mode",short:"Short break",long:"Long break"};const TAB={focus:"Focus",short:"Short break",long:"Long break"};const LBL={focus:"focus",short:"short break",long:"long break"};
   function idle(){return !st.running&&elapsed()<1000}
 
+  /* ---------- focus timeline (this device) ---------- */
+  const TLK="lb-timeline";
+  function tlLoad(){try{return JSON.parse(localStorage.getItem(TLK)||"[]")}catch(_){return []}}
+  function tlSave(a){try{localStorage.setItem(TLK,JSON.stringify(a.slice(-2000)))}catch(_){}}
+  function segOpen(){st.segs=st.segs||[];const l=st.segs[st.segs.length-1];if(!l||l[1])st.segs.push([Date.now(),null])}
+  function segClose(at){const l=(st.segs||[])[(st.segs||[]).length-1];if(l&&!l[1])l[1]=Math.max(l[0],at||Date.now())}
+  function record(full,award,minOverride){
+    const segs=(st.segs||[]).filter(x=>x[1]&&x[1]-x[0]>=15000);if(!segs.length)return;
+    const ms=segs.reduce((a,x)=>a+x[1]-x[0],0);const m=minOverride||Math.max(1,Math.round(ms/60000));if(ms<45000)return;
+    const tk=task();const a=tlLoad();a.push({id:Date.now().toString(36),day:ymd(new Date(segs[0][0])),segs,s:tk.s,t:tk.t,a:tk.a,min:m,full,pts:award?award.total:0});tlSave(a);
+  }
+
   /* ---------- timer control ---------- */
   function start(manual=true){
     if(st.remain<=0)st.remain=total();
     const first=!st.startedAt;
     Sound.ensure();Sound.setVolume(cfg.muted?0:cfg.vol);if(Sound.ambient!==ambient()||!amPlaying)Sound.setAmbient(ambient());amPlaying=true;
     st.running=true;st.endAt=Date.now()+st.remain;if(!st.startedAt)st.startedAt=Date.now();
-    if(st.phase==="focus"){if(first)Points.begin(st,manual);else{if(manual)Points.confirm(st);Points.resume(st)}}
+    if(st.phase==="focus"){if(first)Points.begin(st,manual);else{if(manual)Points.confirm(st);Points.resume(st)}segOpen()}
     save();keepAwake(true);paint(true);
   }
   let amPlaying=false;
-  function pause(){Points.pause(st);st.remain=remaining();st.running=false;save();Sound.stopAmbient();amPlaying=false;keepAwake(false);paint(true)}
+  function pause(){Points.pause(st);if(st.phase==="focus")segClose(Date.now());st.remain=remaining();st.running=false;save();Sound.stopAmbient();amPlaying=false;keepAwake(false);paint(true)}
   function reset(){if(st.phase==="focus"&&st.startedAt)partial();st=fresh(st.phase,st.round);save();if(amPlaying){Sound.stopAmbient();amPlaying=false}keepAwake(false);paint(true)}
   function advance(auto){
     const t=T();const was=st.phase;
@@ -66,13 +79,29 @@ const Focus=(()=>{
     const was=st.phase;const started=st.startedAt||Date.now()-total();
     const rt=document.getElementById("fzRoot");if(rt){rt.classList.add("fz-root-done");setTimeout(()=>rt.classList.remove("fz-root-done"),2500)}
     if(was==="focus"){const m=mins("focus");Sound.play(bell());notify("Focus session complete","Time for a gentle break 🍵");
-      const t0=T();const award=Points.finish(st,true,m,st.round%t0.r===0?t0.l:t0.s);lastAward=award;
+      const t0=T();const award=Points.finish(st,true,m,st.round%t0.r===0?t0.l:t0.s);lastAward=award;segClose(st.endAt);record(true,award,m);
       if(cfg.autoLog)doLog(m,started,task(),award);else if(award)toast(`+${award.total} focus points ✨`);
       advance(cfg.autoBreak);if(!cfg.autoBreak){Sound.stopAmbient();amPlaying=false;keepAwake(false)}
       if(!(cfg.autoLog&&cfg.autoBreak)){pending={m,d:ymd(new Date(started)),logged:cfg.autoLog,done:true,award};sheet="done";if(mounted)renderSheet()}}
     else{Sound.play(breakBell());notify("Break's over","Ready when you are 🌿");advance(cfg.autoFocus);if(!cfg.autoFocus){Sound.stopAmbient();amPlaying=false;keepAwake(false)}}
   }
-  function partial(){if(st.phase==="focus"&&st.startedAt){const a=Points.finish(st,false,mins("focus"),0);if(a)toast(`+${a.total} focus points for the time you put in`)}}
+  function partial(){if(st.phase==="focus"&&st.startedAt){segClose(Date.now());const a=Points.finish(st,false,mins("focus"),0);record(false,a);if(a)toast(`+${a.total} focus points for the time you put in`)}}
+  // stop mid-session but keep the work: log the minutes done, points for them, then move on as usual
+  function finishEarly(){
+    if(st.phase!=="focus"||!st.startedAt)return;const m=Math.max(1,Math.round(elapsed()/60000));const started=st.startedAt;
+    segClose(Date.now());const award=Points.finish(st,false,mins("focus"),0);record(false,award,m);
+    Sound.play(bell());const t0=T();
+    if(cfg.autoLog)doLog(m,started,task(),award);
+    advance(cfg.autoBreak);if(!cfg.autoBreak){Sound.stopAmbient();amPlaying=false;keepAwake(false)}
+    if(!(cfg.autoLog&&cfg.autoBreak)){pending={m,d:ymd(new Date(started)),logged:cfg.autoLog,done:true,award,early:true};sheet="done";renderSheet()}
+    else rerender();
+  }
+  // stop mid-session and throw it away: no log, no points, not in the timeline
+  function skipNoLog(){
+    if(st.phase!=="focus")return;Points.abandon();st.segs=[];
+    advance(st.running&&cfg.autoBreak);if(!st.running){Sound.stopAmbient();amPlaying=false;keepAwake(false)}
+    toast("Skipped — nothing logged");rerender();
+  }
   function switchPhase(ph){
     if(ph===st.phase&&idle())return;
     if(st.phase==="focus"){partial();const m=Math.round(elapsed()/60000);if(m>=1)askLog(m,st.startedAt||Date.now())}
@@ -130,7 +159,7 @@ const Focus=(()=>{
     if(imm()){const d=(scene().imm||{dark:!light}).dark;
       return d?`--fz-bg:${p.bg};--fz-card:transparent;--fz-ink:#fff;--fz-muted:rgba(255,255,255,.78);--fz-accent:#fff;--fz-chip:rgba(255,255,255,.14);--fz-line:rgba(255,255,255,.3);--fz-on-accent:#1a1a1a;--fz-face:rgba(255,255,255,.08);--fz-card-solid:rgba(255,255,255,.24)`
               :`--fz-bg:${p.bg};--fz-card:transparent;--fz-ink:${p.ink};--fz-muted:${p.muted};--fz-accent:${p.accent};--fz-chip:rgba(255,255,255,.5);--fz-line:rgba(0,0,0,.12);--fz-on-accent:#fff;--fz-face:rgba(255,255,255,.55);--fz-card-solid:rgba(255,255,255,.85)`}
-    return `--fz-bg:${p.bg};--fz-card:${p.card};--fz-ink:${p.ink};--fz-muted:${p.muted};--fz-accent:${p.accent};--fz-chip:${p.chip};--fz-line:${p.line};--fz-on-accent:${light?"#fff":"#1a1a1a"};--fz-face:${light?"#fffdf9":"rgba(255,255,255,.07)"};--fz-card-solid:${light?"#fff":"#1c1f2a"}`}
+    return `--fz-bg:${p.bg};--fz-card:${p.card};--fz-ink:${p.ink};--fz-muted:${p.muted};--fz-accent:${p.accent};--fz-chip:${p.chip};--fz-line:${p.line};--fz-on-accent:${light?"#fff":"#1a1a1a"};--fz-face:${light?"#fffdf9":"rgba(255,255,255,.07)"};--fz-card-solid:${light?"#fff":"rgba(255,255,255,.13)"}`}
   function quote(){const q=QUOTES[st.phase];return q[(st.round*3+(st.phase==="focus"?0:1))%q.length]}
   function upNext(){const t=T();if(st.phase==="focus")return (st.round%t.r===0?"Long break":"Break")+" • "+(st.round%t.r===0?t.l:t.s)+"m";return "Focus • "+t.f+"m"}
   function ptsChip(){const s=Points.summary();return `★ ${s.total.toLocaleString()}${s.today?`<small>+${s.today} today</small>`:""}${s.chain>1?`<small>🔥${s.chain}</small>`:""}`}
@@ -138,6 +167,7 @@ const Focus=(()=>{
         <a class="fz-chip icon" href="#home" title="Back to Logbook">${IC.back}<span class="lbl">Logbook</span></a>
         <button class="fz-chip" data-fz="settings" id="fzChip">${chipText()}</button>
         <span class="fz-sp"></span>
+        <button class="fz-chip icon" data-fz="day" title="Today's focus timeline">${IC.cal}<span class="lbl">Today</span></button>
         <button class="fz-chip fz-pts" data-fz="points" id="fzPts" title="Focus points">${ptsChip()}</button>
         <div class="fz-sound"><button class="fz-round" data-fz="mute" title="Mute">${cfg.muted?IC.mute:IC.vol}</button><input class="fz-vol" type="range" id="fzVol" min="0" max="1" step="0.01" value="${cfg.vol}" style="--v:${cfg.vol*100}%"><select id="fzAmb" title="Ambient sound">${Sound.AMBIENTS.map(([k,n])=>`<option value="${k}" ${k===ambient()?"selected":""}>${n}</option>`).join("")}</select></div>
         <button class="fz-chip icon" data-fz="layout" title="${imm()?"Clean layout":"Immersive layout"}">${imm()?IC.clean:IC.imm}</button>
@@ -145,9 +175,10 @@ const Focus=(()=>{
         <button class="fz-chip icon" data-fz="full" title="Full screen">${IC.full}</button>
         <button class="fz-chip" data-fz="end">${IC.x}<span class="lbl">End</span></button>`}
   function tabsHTML(){return `<div class="fz-tabs" id="fzTabs">${["focus","short","long"].map(ph=>`<button data-fzphase="${ph}" class="${ph===st.phase?"on":""}">${TAB[ph]}</button>`).join("")}</div>`}
-  function ctrlHTML(){return `<div class="fz-ctrl"><button class="fz-btn primary" data-fz="toggle" id="fzToggle">${st.running?IC.pause+"Pause":IC.play+(elapsed()>500?"Resume":"Start")}</button>
+  function midFocus(){return st.phase==="focus"&&!!st.startedAt&&elapsed()>=60000}
+  function ctrlHTML(){const mid=midFocus();return `<div class="fz-ctrl" id="fzCtrl" data-mid="${mid?1:0}"><button class="fz-btn primary" data-fz="toggle" id="fzToggle">${st.running?IC.pause+"Pause":IC.play+(elapsed()>500?"Resume":"Start")}</button>
             <button class="fz-btn round" data-fz="reset" title="Restart this session">${IC.reset}</button>
-            <button class="fz-btn" data-fz="next">Next ${IC.next}</button></div>`}
+            ${mid?`<button class="fz-btn" data-fz="finishEarly" title="Stop now and log the minutes you've done">✓ Finish &amp; log</button><button class="fz-btn ghost" data-fz="skipNoLog" title="Stop without logging or points">Skip</button>`:`<button class="fz-btn" data-fz="next">Next ${IC.next}</button>`}</div>`}
   function bgHTML(){const sc=scene();return sc.bg?sc.bg():`<div class="fz-bg-art">${sc.art()}</div>`}
   function viewImm(){const tk=task(),sc=scene(),d=(sc.imm||{}).dark;
     return `<div class="fz fz-imm ${d?"imm-dark":"imm-light"}" id="fzRoot" style="${vars()}">
@@ -170,9 +201,7 @@ const Focus=(()=>{
           <div class="fz-tabs" id="fzTabs">${["focus","short","long"].map(ph=>`<button data-fzphase="${ph}" class="${ph===st.phase?"on":""}">${TAB[ph]}</button>`).join("")}</div>
           <div class="fz-clock" id="fzClock" data-style="${cfg.clock}" data-fz="cycleClock" title="Tap to change the clock style">${Clocks.html(cfg.clock)}</div>
           <p class="fz-quote" id="fzQuote">“${quote()}”</p>
-          <div class="fz-ctrl"><button class="fz-btn primary" data-fz="toggle" id="fzToggle">${st.running?IC.pause+"Pause":IC.play+(elapsed()>500?"Resume":"Start")}</button>
-            <button class="fz-btn round" data-fz="reset" title="Restart this session">${IC.reset}</button>
-            <button class="fz-btn" data-fz="next">Next ${IC.next}</button></div>
+          ${ctrlHTML()}
           <div id="fzSetup">${setupHTML()}</div>
           <button class="fz-task" data-fz="task"><small>Working on</small><b>${esc(tk.s)} · ${esc(tk.t)}</b><span class="a">${tk.a?"— "+esc(tk.a):""}</span><span style="margin-left:auto">✎</span></button>
           <div class="fz-dots" id="fzDots">${dotsHTML()}</div>
@@ -206,6 +235,7 @@ const Focus=(()=>{
       g("fzQuote").textContent="“"+quote()+"”";g("fzNext").textContent=upNext();
       g("fzToggle").innerHTML=st.running?IC.pause+"Pause":IC.play+(elapsed()>500?"Resume":"Start");
       g("fzDots").innerHTML=dotsHTML();document.querySelectorAll("#fzTabs button").forEach(b=>b.classList.toggle("on",b.dataset.fzphase===st.phase))}
+    const cc=document.getElementById("fzCtrl");if(cc&&cc.dataset.mid!==(midFocus()?"1":"0"))cc.outerHTML=ctrlHTML();
     if(wasIdle!==idle()){wasIdle=idle();const sp=document.getElementById("fzSetup");if(sp)sp.innerHTML=setupHTML()}
     const ck=document.getElementById("fzClock");if(ck){const inner=ck.firstElementChild;if(inner){inner.dataset.run=st.running?"1":"0";Clocks.paint(cfg.clock,inner,r,total(),LBL[st.phase])}}
     const sc=scene();if(full||Math.abs(p-lastP)>.002){const ctx={phase:st.phase,started:!!st.startedAt,running:st.running,focusMin:mins("focus"),raw:p};const pp=st.phase==="focus"?p:1-p;
@@ -255,6 +285,7 @@ const Focus=(()=>{
       <div class="two"><div class="field"><label>Subject</label><select id="fztS">${list.map(s=>`<option ${s===tk.s?"selected":""}>${esc(s)}</option>`).join("")}</select></div>
       <div class="field"><label>Type</label><select id="fztT">${types().map(x=>`<option ${x===tk.t?"selected":""}>${esc(x)}</option>`).join("")}</select></div></div>
       <div class="row" style="justify-content:flex-end"><button class="fz-pbtn sec" data-fz="close">Cancel</button><button class="fz-pbtn" data-fz="saveTask">Save</button></div>`;
+    }else if(sheet==="day"){h=dayHTML();
     }else if(sheet==="points"){
       const S=Points.summary();const ex=Points.score(25,25,3,30000,true);
       h=`<div class="row"><h3>Focus points</h3><span class="spacer"></span><button class="fz-pbtn sec" data-fz="close">Close</button></div>
@@ -271,7 +302,7 @@ const Focus=(()=>{
       <h4>Recent sessions</h4>${S.recent.map(r=>`<div class="fz-ptrow"><span>${new Date(r.t).toLocaleString([], {weekday:"short",hour:"2-digit",minute:"2-digit"})} · ${r.min} min${r.n>1?` · 🔥${r.n}`:""}</span><b>+${r.total}</b></div>`).join("")||'<p style="color:#958a80;font-size:13px">No sessions yet — start one!</p>'}`;
     }else if(sheet==="done"&&pending){
       const brk=st.phase!=="focus",bm=mins(st.phase),fm=mins("focus");const aw=pending.award;
-      h=`<div class="fz-done"><div class="leaf">🌿</div><h3>Nicely done</h3><p>${pending.m} minute${pending.m===1?"":"s"} of focus${pending.logged?" — saved to your logbook ✓":". It'll be saved with:"}</p>
+      h=`<div class="fz-done"><div class="leaf">🌿</div><h3>${pending.early?"Stopped early — the work still counts":"Nicely done"}</h3><p>${pending.m} minute${pending.m===1?"":"s"} of focus${pending.logged?" — saved to your logbook ✓":". It'll be saved with:"}</p>
         ${aw?`<div class="fz-earn"><b>+${aw.total} focus points</b><span>${aw.min} min${aw.lenM>1?` × ${aw.lenM.toFixed(2)} length`:""}${aw.chM>1?` × ${aw.chM.toFixed(1)} chain`:""}${aw.comp?` · +${aw.comp} finish`:""}${aw.onT?` · +${aw.onT} on time`:""}</span></div>`:`<div class="fz-earn none"><span>No points this time — the session wasn't confirmed as attended.</span></div>`}</div>
       ${pending.logged?"":logFields(tk)}
       <h4 style="text-align:center;margin-top:18px">What's next?</h4>
@@ -284,6 +315,32 @@ const Focus=(()=>{
       <div class="row" style="justify-content:flex-end"><button class="fz-pbtn sec" data-fz="skipLog">Not now</button><button class="fz-pbtn" data-fz="saveLog">Save to logbook</button></div>`;
     }
     host.innerHTML=`<div class="fz-scrim" data-fz="scrim"><div class="fz-panel">${h}</div></div>`;
+  }
+  let dayView=null;
+  const HUES=["#8fa287","#7891a6","#a9a0c6","#6e9e99","#c99c84","#b48fa6","#9aa86e","#8c9db8"];
+  function hue(sub){let h=0;for(const c of sub)h=(h*31+c.charCodeAt(0))>>>0;return HUES[h%HUES.length]}
+  const hm=t=>new Date(t).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+  function dayHTML(){
+    const day=dayView||ymd(new Date());const d0=new Date(day+"T00:00:00").getTime();
+    const list=tlLoad().filter(e=>e.day===day);
+    if(day===ymd(new Date())&&st.phase==="focus"&&st.startedAt&&(st.segs||[]).length){const tk=task();list.push({live:true,segs:st.segs.map(x=>[x[0],x[1]||Date.now()]),s:tk.s,t:tk.t,a:tk.a,min:Math.round(elapsed()/60000)})}
+    list.sort((a,b)=>a.segs[0][0]-b.segs[0][0]);
+    const total=list.reduce((a,e)=>a+e.segs.reduce((x,g)=>x+g[1]-g[0],0),0);
+    let h0=8,h1=20;if(list.length){const st0=Math.min(...list.map(e=>e.segs[0][0])),en=Math.max(...list.map(e=>e.segs[e.segs.length-1][1]));h0=Math.max(0,Math.floor((st0-d0)/36e5)-1);h1=Math.min(24,Math.max(h0+4,Math.ceil((en-d0)/36e5)+1))}
+    const PX=56,H=(h1-h0)*PX;const y=t=>((t-d0)/36e5-h0)*PX;
+    let grid="";for(let hh=h0;hh<=h1;hh++)grid+=`<div class="tl-hr" style="top:${(hh-h0)*PX}px"><span>${String(hh).padStart(2,"0")}:00</span></div>`;
+    let blocks="";list.forEach(e=>{const c=hue(e.s);e.segs.forEach((g,i)=>{const top=y(g[0]),hgt=Math.max(5,y(g[1])-top);
+      blocks+=`<div class="tl-blk${e.live?" live":""}" style="top:${top}px;height:${hgt}px;--c:${c}" title="${hm(g[0])}–${hm(g[1])} · ${esc(e.s)} · ${esc(e.t)}${e.a?" — "+esc(e.a):""}">${i===0&&hgt>=22?`<b>${hm(g[0])}–${hm(e.segs[e.segs.length-1][1])}</b> ${esc(e.s)} · ${esc(e.t)}${e.a?` <span>— ${esc(e.a)}</span>`:""}`:""}</div>`})});
+    const nowL=day===ymd(new Date())?`<div class="tl-now" style="top:${y(Date.now())}px"></div>`:"";
+    let rows="";list.forEach((e,i)=>{if(i){const gap=e.segs[0][0]-list[i-1].segs[list[i-1].segs.length-1][1];if(gap>=60000)rows+=`<div class="tl-gap">${gap<3*36e5?`☕ ${Math.round(gap/60000)} min break`:`· · ·`}</div>`}
+      const ms=e.segs.reduce((x,g)=>x+g[1]-g[0],0);
+      rows+=`<div class="tl-row"><i style="background:${hue(e.s)}"></i><div><b>${hm(e.segs[0][0])} – ${hm(e.segs[e.segs.length-1][1])}</b> · ${Math.round(ms/60000)} min${e.segs.length>1?` <small>(${e.segs.length} parts, paused in between)</small>`:""}<br><span>${esc(e.s)} · ${esc(e.t)}${e.a?" — "+esc(e.a):""}</span></div><em>${e.live?"in progress":e.full?"✓ finished":"stopped early"}${e.pts?` · +${e.pts}★`:""}</em></div>`});
+    const dd=new Date(day+"T12:00:00");
+    return `<div class="row"><h3>Focus timeline</h3><span class="spacer"></span><button class="fz-pbtn sec" data-fz="close">Close</button></div>
+      <div class="tl-nav"><button class="fz-pbtn sec" data-fzday="-1">‹</button><b>${dd.toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"})}</b><button class="fz-pbtn sec" data-fzday="1" ${day>=ymd(new Date())?"disabled":""}>›</button></div>
+      <p class="tl-sum">${list.length?`<b>${total>=36e5?Math.floor(total/36e5)+" h ":""}${Math.round(total%36e5/60000)} min</b> focused in ${list.length} session${list.length===1?"":"s"}`:"No focus sessions on this day."}</p>
+      ${list.length?`<div class="tl-wrap"><div class="tl" style="height:${H}px">${grid}${blocks}${nowL}</div></div><h4>Sessions</h4>${rows}`:""}
+      <p style="color:#958a80;font-size:12px;margin-top:14px">Only sessions run with the focus timer appear here (they're the ones with exact start and end times). Saved on this device.</p>`;
   }
   function logFields(tk){const subs=subjects();if(!subs.includes(tk.s))subs.unshift(tk.s);
     return `<div class="field"><label>Activity</label><input type="text" id="fzlA" maxlength="300" value="${esc(tk.a)}" placeholder="What did you do?"></div>
@@ -304,6 +361,7 @@ const Focus=(()=>{
     const pr=e.target.closest("[data-fzpreset]");if(pr){const p=cfg.presets[+pr.dataset.fzpreset];if(p){sheet=null;applyPreset(p)}return}
     const pd=e.target.closest("[data-fzpdel]");if(pd){cfg.presets.splice(+pd.dataset.fzpdel,1);save();renderSheet();refresh();return}
     const dn=e.target.closest("[data-fzdone]");if(dn){const c=dn.dataset.fzdone;if(c==="later"){pending=null;sheet=null;rerender()}else doneChoice(c);return}
+    const dv=e.target.closest("[data-fzday]");if(dv){const d=new Date((dayView||ymd(new Date()))+"T12:00:00");d.setDate(d.getDate()+(+dv.dataset.fzday));const nd=ymd(d);if(nd<=ymd(new Date())){dayView=nd;renderSheet()}return}
     const ly=e.target.closest("[data-fzlayout]");if(ly){cfg.layout=ly.dataset.fzlayout;save();rerender();sheet="settings";renderSheet();return}
     const a=e.target.closest("[data-fz]");if(!a)return;const k=a.dataset.fz;
     if(k==="scrim"&&e.target!==a)return;
@@ -313,6 +371,9 @@ const Focus=(()=>{
     else if(k==="end")end();
     else if(k==="settings"){sheet="settings";renderSheet()}
     else if(k==="points"){sheet="points";renderSheet()}
+    else if(k==="day"){dayView=null;sheet="day";renderSheet()}
+    else if(k==="finishEarly")finishEarly();
+    else if(k==="skipNoLog")skipNoLog();
     else if(k==="layout"){cfg.layout=imm()?"clean":"immersive";save();rerender()}
     else if(k==="task"){sheet="task";renderSheet()}
     else if(k==="close"||k==="scrim"){if(sheet==="log"||sheet==="done")return;sheet=null;renderSheet()}

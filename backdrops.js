@@ -45,87 +45,85 @@ const Candle={
     return pts.map(([x,y])=>[x,y-bumps.reduce((s,[bx,bh,bw])=>s+bh*Math.exp(-Math.abs(x-bx)/bw),0)])}
   const fill=pts=>`M0 ${HH} L${pts.map(p=>p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" L")} L${W} ${HH}Z`;
   const line=pts=>"M"+pts.map(p=>p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" L");
-  const svg=(inner,defs="")=>`<svg class="fz-bgsvg" viewBox="0 0 ${W} ${HH}" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><filter id="bblur" x="-50%" y="-300%" width="200%" height="700%"><feGaussianBlur stdDeviation="18"/></filter><filter id="sblur" x="-50%" y="-300%" width="200%" height="700%"><feGaussianBlur stdDeviation="6"/></filter>${defs}</defs>${inner}</svg>`;
+  const svg=(inner,defs="")=>`<svg class="fz-bgsvg" viewBox="0 0 ${W} ${HH}" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><filter id="pd" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="3" seed="5"/><feDisplacementMap in="SourceGraphic" scale="14"/></filter><filter id="grainB" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".75" numOctaves="2" seed="3"/><feColorMatrix values="0 0 0 0 .3  0 0 0 0 .26  0 0 0 0 .22  0 0 0 .28 0"/></filter><filter id="bblur" x="-50%" y="-300%" width="200%" height="700%"><feGaussianBlur stdDeviation="18"/></filter><filter id="sblur" x="-50%" y="-300%" width="200%" height="700%"><feGaussianBlur stdDeviation="6"/></filter>${defs}</defs>${inner}<rect width="${W}" height="${HH}" filter="url(#grainB)" opacity=".5"/></svg>`;
   const lg=(id,stops,v=true)=>`<linearGradient id="${id}" x1="0" y1="0" x2="${v?0:1}" y2="${v?1:0}">${stops.map(([o,c,a])=>`<stop offset="${o}" stop-color="${c}"${a!=null?` stop-opacity="${a}"`:""}/>`).join("")}</linearGradient>`;
   const DARK={dark:true};
 
   /* ---------- Alpine (new) ---------- */
-  Scenes.alpine={name:"Alpine dusk",caption:"above the clouds…",ambient:"forest",bell:"bowl",breakBell:"chimes",
-    pal:{bg:"linear-gradient(180deg,#2b3350 0%,#6a5b6e 55%,#d9a481 100%)",card:"rgba(255,255,255,.08)",ink:"#f5efe9",muted:"#cdbfb8",accent:"#f0a77a",chip:"rgba(255,255,255,.1)",line:"rgba(255,255,255,.14)"},
-    art(){return `<svg viewBox="0 0 360 360" class="fz-svg"><defs><clipPath id="afrm"><rect width="360" height="360" rx="44"/></clipPath></defs><g clip-path="url(#afrm)"><svg x="-180" y="0" width="720" height="360" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice"><defs><filter id="bblur" x="-50%" y="-300%" width="200%" height="700%"><feGaussianBlur stdDeviation="18"/></filter>${Scenes.alpine._defs()}</defs>${Scenes.alpine._inner()}</svg></g></svg>`},
+  Object.assign(Scenes.alpine,{
     bg(){return svg(this._inner(),this._defs())},
-    _defs(){return lg("aSky",[[0,"#1d2440"],[.38,"#454a6c"],[.62,"#9a7a82"],[.8,"#e2a985"],[1,"#f3c79a"]])+`<radialGradient id="aSun" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1090 610) scale(560 360)"><stop offset="0" stop-color="#ffe2b0" stop-opacity=".95"/><stop offset=".35" stop-color="#ffc58f" stop-opacity=".45"/><stop offset="1" stop-color="#ffc58f" stop-opacity="0"/></radialGradient>`+
-      lg("aRock",[[0,"#6b5260"],[.55,"#43323f"],[1,"#2a1f29"]])+lg("aRock2",[[0,"#3a2b33"],[1,"#1b1418"]])+lg("aHaze",[[0,"#f3d2c0",0],[.5,"#f3d2c0",.35],[1,"#f3d2c0",0]])},
+    _defs(){return lg("aSky",[[0,"#3b4060"],[.4,"#5f6283"],[.65,"#a594a6"],[.82,"#d9b9b1"],[1,"#ecd3c3"]])+`<radialGradient id="aSun" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1090 610) scale(560 360)"><stop offset="0" stop-color="#f6e2cc" stop-opacity=".9"/><stop offset=".35" stop-color="#efcdb8" stop-opacity=".4"/><stop offset="1" stop-color="#efcdb8" stop-opacity="0"/></radialGradient>`+
+      lg("aRock",[[0,"#7a7495"],[.55,"#5f5a7a"],[1,"#4a4662"]])+lg("aRock2",[[0,"#4a4662"],[1,"#383549"]])+lg("aHaze",[[0,"#efe3e4",0],[.5,"#efe3e4",.35],[1,"#efe3e4",0]])},
     _inner(){if(this._c)return this._c;const R=rng(42);
       const far=ridge(R,640,80,.55,[[300,60,160],[1400,90,200]]);
       const peaks=ridge(R,770,50,.6,[[620,230,150],[800,380,115],[960,320,95],[1100,230,130],[1260,140,150]]);
       const near=ridge(R,870,60,.52,[[200,90,180],[1450,70,160]]);const fg=ridge(R,950,40,.5);
       return this._c=`<rect width="${W}" height="${HH}" fill="url(#aSky)"/><rect width="${W}" height="${HH}" fill="url(#aSun)"/>
-        <path d="${fill(far)}" fill="#8a86a3" opacity=".75"/><g class="fz-fog"><ellipse cx="520" cy="655" rx="520" ry="42" fill="#fff" opacity=".35" filter="url(#bblur)"/></g>
-        <path d="${fill(peaks)}" fill="url(#aRock)"/><path d="${line(peaks)}" fill="none" stroke="#ffb98a" stroke-width="3" opacity=".55"/>
+        <path filter="url(#pd)" d="${fill(far)}" fill="#9b97b3" opacity=".8"/><g class="fz-fog"><ellipse cx="520" cy="655" rx="520" ry="42" fill="#fff" opacity=".35" filter="url(#bblur)"/></g>
+        <path filter="url(#pd)" d="${fill(peaks)}" fill="url(#aRock)"/><path d="${line(peaks)}" fill="none" stroke="#f3dccd" stroke-width="3" opacity=".5"/>
         <g class="fz-fog rev"><ellipse cx="900" cy="520" rx="260" ry="34" fill="#fff" opacity=".55" filter="url(#bblur)"/></g>
         <rect y="690" width="${W}" height="140" fill="url(#aHaze)"/>
-        <path d="${fill(near)}" fill="url(#aRock2)"/><path d="${line(near)}" fill="none" stroke="#e8996b" stroke-width="2.5" opacity=".45"/>
-        <path d="${fill(fg)}" fill="#140f13"/>`},
-    imm:DARK};
+        <path filter="url(#pd)" d="${fill(near)}" fill="url(#aRock2)"/><path d="${line(near)}" fill="none" stroke="#e2c7bb" stroke-width="2.5" opacity=".35"/>
+        <path filter="url(#pd)" d="${fill(fg)}" fill="#2e2c3c"/>`},
+    imm:DARK});
 
   /* ---------- Sunrise ---------- */
-  Scenes.sunrise.bg=function(){const R=rng(9);const hills=[[720,40,"#eab3a8",.9],[790,50,"#dc9c9e",1],[860,45,"#c48896",1],[935,35,"#a5788a",1]].map(([y,a,c,o])=>`<path d="${fill(ridge(R,y,a,.42,[],6))}" fill="${c}" opacity="${o}"/>`).join("");
-    let birds="";for(let i=0;i<6;i++){const y=220+R()*200,s=1.2+R()*1.4;birds+=`<g class="fz-drift xl" style="animation-duration:${60+R()*50}s;animation-delay:-${R()*60}s"><path transform="translate(0 ${y}) scale(${s})" d="M0 0 q6 -6 12 0 q6 -6 12 0" fill="none" stroke="#7d5c68" stroke-width="2" stroke-linecap="round"/></g>`}
-    return svg(`<rect width="${W}" height="${HH}" fill="url(#sSky)"/><g id="sun"><circle cx="800" cy="0" r="330" fill="url(#sGlow)"/><circle cx="800" cy="0" r="92" fill="#fff4d6"/></g>
+  Scenes.sunrise.bg=function(){const R=rng(9);const hills=[[720,40,"#e6cbc2",1],[790,50,"#d3b1ac",1],[860,45,"#b9a5b6",1],[935,35,"#a2ae98",1]].map(([y,a,c,o])=>`<path filter="url(#pd)" d="${fill(ridge(R,y,a,.42,[],6))}" fill="${c}" opacity="${o}"/>`).join("");
+    let birds="";for(let i=0;i<6;i++){const y=220+R()*200,s=1.2+R()*1.4;birds+=`<g class="fz-drift xl" style="animation-duration:${60+R()*50}s;animation-delay:-${R()*60}s"><path transform="translate(0 ${y}) scale(${s})" d="M0 0 q6 -6 12 0 q6 -6 12 0" fill="none" stroke="#8f7f7a" stroke-width="2" stroke-linecap="round"/></g>`}
+    return svg(`<rect width="${W}" height="${HH}" fill="url(#sSky)"/><g id="sun"><circle cx="800" cy="0" r="330" fill="url(#sGlow)"/><circle cx="800" cy="0" r="92" fill="#f4d9b8"/></g>
       <g class="fz-drift slow xl"><ellipse cx="200" cy="260" rx="200" ry="26" fill="#fff" opacity=".45" filter="url(#sblur)"/><ellipse cx="1100" cy="330" rx="260" ry="30" fill="#fff" opacity=".35" filter="url(#sblur)"/></g>${birds}${hills}`,
-      lg("sSky",[[0,"#e8b6bd"],[.5,"#f8d3c3"],[1,"#ffe7cc"]])+`<radialGradient id="sGlow"><stop offset="0" stop-color="#fff1c9" stop-opacity=".95"/><stop offset="1" stop-color="#ffd9b0" stop-opacity="0"/></radialGradient>`)};
+      lg("sSky",[[0,"#f1d5cc"],[.5,"#f6e3d8"],[1,"#f9ede2"]])+`<radialGradient id="sGlow"><stop offset="0" stop-color="#f6dcc0" stop-opacity=".9"/><stop offset="1" stop-color="#f6dcc0" stop-opacity="0"/></radialGradient>`)};
   Scenes.sunrise.bgUpdate=(r,p)=>{const s=r.querySelector("#fzBg #sun");if(s)s.setAttribute("transform",`translate(0 ${700-p*360})`)};
   Scenes.sunrise.imm={dark:false};
 
   /* ---------- Rain ---------- */
-  Scenes.rain.bg=function(){const R=rng(5);let bokeh="",glass="",win="";const cols=["#f6c27a","#e98f6f","#9ec0e4","#f3d9a6","#c99ad8","#ffe0a3"];
+  Scenes.rain.bg=function(){const R=rng(5);let bokeh="",glass="",win="";const cols=["#eed9b4","#e3c3ba","#dfe7ee","#d8cfe3","#f2e6cf","#c9d6e2"];
     for(let i=0;i<70;i++)bokeh+=`<circle cx="${R()*W}" cy="${380+R()*560}" r="${14+R()*46}" fill="${cols[i%6]}" opacity="${.18+R()*.35}"/>`;
-    for(let i=0;i<40;i++){const x=R()*W,y=150+R()*420;win+=`<rect x="${x}" y="${y}" width="${6+R()*10}" height="${8+R()*12}" fill="#ffd79a" opacity="${.2+R()*.5}"/>`}
+    for(let i=0;i<40;i++){const x=R()*W,y=150+R()*420;win+=`<rect x="${x}" y="${y}" width="${6+R()*10}" height="${8+R()*12}" fill="#f0ddb8" opacity="${.2+R()*.5}"/>`}
     for(let i=0;i<110;i++){const r=2+R()*7;glass+=`<circle class="${R()<.22?"fz-slide xl":""}" cx="${R()*W}" cy="${R()*HH}" r="${r}" fill="rgba(220,235,255,.08)" stroke="rgba(235,245,255,.3)" stroke-width="1" style="animation-duration:${18+R()*24}s;animation-delay:-${R()*30}s"/>`}
-    return svg(`<rect width="${W}" height="${HH}" fill="url(#rSky)"/><g filter="url(#bblur)">${win}${bokeh}</g><rect y="760" width="${W}" height="240" fill="#0f141c" opacity=".45"/>${glass}`,lg("rSky",[[0,"#33405a"],[.6,"#222b3b"],[1,"#141922"]]))};
-  Scenes.rain.imm=DARK;Scenes.rain.fx="rain";
+    return svg(`<rect width="${W}" height="${HH}" fill="url(#rSky)"/><g filter="url(#bblur)">${win}${bokeh}</g><rect y="760" width="${W}" height="240" fill="#8698a9" opacity=".3"/>${glass}`,lg("rSky",[[0,"#c9d4de"],[.6,"#b4c4d1"],[1,"#a2b4c3"]]))};
+  Scenes.rain.imm={dark:false};Scenes.rain.fx="rain";
 
   /* ---------- Night ---------- */
-  Scenes.night.bg=function(){const R=rng(17);let stars="";for(let i=0;i<320;i++){const tw=R()<.25;stars+=`<circle ${tw?`class="fz-tw" style="animation-duration:${2+R()*4}s;animation-delay:-${R()*5}s"`:""} cx="${R()*W}" cy="${R()*700}" r="${.4+R()*1.5}" fill="#fff" opacity="${tw?1:.35+R()*.6}"/>`}
+  Scenes.night.bg=function(){const R=rng(17);let stars="";for(let i=0;i<320;i++){const tw=R()<.25;stars+=`<circle ${tw?`class="fz-tw" style="animation-duration:${2+R()*4}s;animation-delay:-${R()*5}s"`:""} cx="${R()*W}" cy="${R()*700}" r="${.4+R()*1.5}" fill="#f2ead6" opacity="${tw?1:.35+R()*.6}"/>`}
     return svg(`<rect width="${W}" height="${HH}" fill="url(#nSky2)"/><ellipse cx="800" cy="330" rx="900" ry="120" transform="rotate(-18 800 330)" fill="url(#mw)" filter="url(#bblur)"/>${stars}
       <line class="fz-shoot xl" x1="300" y1="140" x2="420" y2="200" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
       <g id="moon2"><circle cx="1250" cy="230" r="150" fill="url(#mg2)"/><circle cx="1250" cy="230" r="54" fill="#f5efd6" mask="url(#cres2)"/></g>
-      <path d="${fill(ridge(R,760,90,.55,[[500,120,200],[1100,90,160]]))}" fill="#232857"/><path d="${fill(ridge(R,860,50,.5))}" fill="#141838"/>`,
-      lg("nSky2",[[0,"#090d26"],[.6,"#1b2052"],[1,"#2e2c66"]])+`<radialGradient id="mw"><stop offset="0" stop-color="#c9c3ff" stop-opacity=".28"/><stop offset="1" stop-color="#c9c3ff" stop-opacity="0"/></radialGradient>
+      <path filter="url(#pd)" d="${fill(ridge(R,760,90,.55,[[500,120,200],[1100,90,160]]))}" fill="#30354f"/><path filter="url(#pd)" d="${fill(ridge(R,860,50,.5))}" fill="#232739"/>`,
+      lg("nSky2",[[0,"#262b44"],[.6,"#343a5a"],[1,"#454a6c"]])+`<radialGradient id="mw"><stop offset="0" stop-color="#d6cfec" stop-opacity=".28"/><stop offset="1" stop-color="#d6cfec" stop-opacity="0"/></radialGradient>
       <radialGradient id="mg2"><stop offset="0" stop-color="#f5efd6" stop-opacity=".3"/><stop offset="1" stop-color="#f5efd6" stop-opacity="0"/></radialGradient><mask id="cres2"><rect width="${W}" height="${HH}" fill="#fff"/><circle cx="1278" cy="212" r="48" fill="#000"/></mask>`)};
   Scenes.night.imm=DARK;
 
   /* ---------- Ocean ---------- */
   Scenes.ocean.bg=function(){const wave=(y,c,d,o,a)=>`<g class="fz-wave xl" style="animation-duration:${d}s"><path d="M-400 ${y} ${Array.from({length:22},()=>`q50 -${a} 100 0 t100 0`).join(" ")} L4000 ${HH} L-400 ${HH}Z" fill="${c}" opacity="${o}"/></g>`;
-    return svg(`<rect width="${W}" height="${HH}" fill="url(#oSky2)"/><circle cx="800" cy="470" r="70" fill="#fff6e3"/><circle cx="800" cy="470" r="200" fill="#fff6e3" opacity=".22"/>
+    return svg(`<rect width="${W}" height="${HH}" fill="url(#oSky2)"/><circle cx="800" cy="470" r="70" fill="#f4e1c7"/><circle cx="800" cy="470" r="200" fill="#f6e5cd" opacity=".3"/>
       <rect y="520" width="${W}" height="480" fill="url(#oSea)"/><rect x="730" y="520" width="140" height="300" fill="url(#oRef)" filter="url(#sblur)"/>
-      ${wave(560,"#7fbdc0",22,.8,8)}${wave(630,"#5fa9ae",16,.9,12)}${wave(720,"#4797a0",12,1,16)}
-      <path d="M0 860 Q400 820 800 850 T1600 840 L1600 1000 L0 1000Z" fill="#f1dfc0"/><path class="fz-foam" d="M0 860 Q400 820 800 850 T1600 840" stroke="#fff" stroke-width="5" fill="none" opacity=".8"/>`,
-      lg("oSky2",[[0,"#f2cdb9"],[.6,"#f8e4d3"],[1,"#d8ecec"]])+lg("oSea",[[0,"#9ccfd0"],[1,"#3f8f97"]])+lg("oRef",[[0,"#fff6e3",.7],[1,"#fff6e3",0]]))};
+      ${wave(560,"#a3c8c1",22,.85,8)}${wave(630,"#8bb8b1",16,.9,12)}${wave(720,"#74a6a0",12,1,16)}
+      <path d="M0 860 Q400 820 800 850 T1600 840 L1600 1000 L0 1000Z" fill="#eadabd"/><path class="fz-foam" d="M0 860 Q400 820 800 850 T1600 840" stroke="#fff" stroke-width="5" fill="none" opacity=".8"/>`,
+      lg("oSky2",[[0,"#f3e6dc"],[.6,"#f5eee6"],[1,"#e2eeeb"]])+lg("oSea",[[0,"#b5d3cd"],[1,"#74a6a0"]])+lg("oRef",[[0,"#fff6e3",.7],[1,"#fff6e3",0]]))};
   Scenes.ocean.imm={dark:false};
 
   /* ---------- Forest ---------- */
-  Scenes.forest.bg=function(){const R=rng(29);const pines=(base,h,c,n)=>{let s="";for(let i=0;i<n;i++){const x=i*(W+80)/n-40+R()*20,hh=h*(.65+R()*.6),w=hh*.38;s+=`<path d="M${x} ${base} L${x+w/2} ${base-hh} L${x+w} ${base}Z" fill="${c}"/>`}return s+`<rect y="${base-1}" width="${W}" height="${HH-base}" fill="${c}"/>`};
+  Scenes.forest.bg=function(){const R=rng(29);const pines=(base,h,c,n)=>{let s="";for(let i=0;i<n;i++){const x=i*(W+80)/n-40+R()*20,hh=h*(.65+R()*.6),w=hh*.38;s+=`<path d="M${x} ${base} L${x+w/2} ${base-hh} L${x+w} ${base}Z" fill="${c}"/>`}return `<g filter="url(#pd)">${s}<rect y="${base-1}" width="${W}" height="${HH-base}" fill="${c}"/></g>`};
     let rays="";for(let i=0;i<5;i++){const x=200+i*130;rays+=`<polygon class="fz-ray" points="${x},0 ${x+70},0 ${x+520},${HH} ${x+300},${HH}" fill="url(#ray)" style="animation-delay:-${i*2}s"/>`}
     return svg(`<rect width="${W}" height="${HH}" fill="url(#fSky2)"/><circle cx="330" cy="170" r="70" fill="#fffbe9" opacity=".9"/>${rays}
-      ${pines(560,210,"#c3cfbc",30)}<g class="fz-fog xl"><ellipse cx="500" cy="570" rx="700" ry="50" fill="#fff" opacity=".5" filter="url(#bblur)"/></g>
-      ${pines(690,260,"#9db299",26)}<g class="fz-fog rev xl"><ellipse cx="1100" cy="700" rx="760" ry="56" fill="#fff" opacity=".42" filter="url(#bblur)"/></g>
-      ${pines(840,330,"#738f72",22)}${pines(990,420,"#4b6450",17)}`,
-      lg("fSky2",[[0,"#f4f2e2"],[1,"#d3dfcd"]])+lg("ray",[[0,"#fffbe6",.35],[1,"#fffbe6",0]]))};
+      ${pines(560,210,"#c9d4c0",30)}<g class="fz-fog xl"><ellipse cx="500" cy="570" rx="700" ry="50" fill="#fff" opacity=".5" filter="url(#bblur)"/></g>
+      ${pines(690,260,"#a3b59a",26)}<g class="fz-fog rev xl"><ellipse cx="1100" cy="700" rx="760" ry="56" fill="#fff" opacity=".42" filter="url(#bblur)"/></g>
+      ${pines(840,330,"#7c9273",22)}${pines(990,420,"#5f7458",17)}`,
+      lg("fSky2",[[0,"#f2f1e6"],[1,"#dfe6d8"]])+lg("ray",[[0,"#fbf8ec",.35],[1,"#fbf8ec",0]]))};
   Scenes.forest.imm={dark:false};
 
   /* ---------- Cozy ---------- */
   Scenes.cozy.bg=function(){const R=rng(3);let snow="";for(let i=0;i<60;i++)snow+=`<circle class="fz-snow" cx="${150+R()*400}" cy="${-20}" r="${1.5+R()*2.5}" fill="#fff" opacity="${.5+R()*.4}" style="animation-duration:${8+R()*8}s;animation-delay:-${R()*16}s"/>`;
     return svg(`<rect width="${W}" height="${HH}" fill="url(#cWall)"/>
       <g><rect x="140" y="120" width="420" height="520" rx="16" fill="url(#cWin)"/><clipPath id="cwc"><rect x="140" y="120" width="420" height="520" rx="16"/></clipPath><g clip-path="url(#cwc)">${snow}<circle cx="460" cy="230" r="40" fill="#f3efd9" opacity=".85"/></g>
-        <rect x="140" y="120" width="420" height="520" rx="16" fill="none" stroke="#3e2a1f" stroke-width="18"/><line x1="350" y1="120" x2="350" y2="640" stroke="#3e2a1f" stroke-width="12"/><line x1="140" y1="380" x2="560" y2="380" stroke="#3e2a1f" stroke-width="12"/></g>
-      <rect x="0" y="830" width="${W}" height="170" fill="url(#cTable)"/><rect x="0" y="830" width="${W}" height="6" fill="#6a4630"/>
+        <rect x="140" y="120" width="420" height="520" rx="16" fill="none" stroke="#2e2622" stroke-width="18"/><line x1="350" y1="120" x2="350" y2="640" stroke="#2e2622" stroke-width="12"/><line x1="140" y1="380" x2="560" y2="380" stroke="#2e2622" stroke-width="12"/></g>
+      <rect x="0" y="830" width="${W}" height="170" fill="url(#cTable)"/><rect x="0" y="830" width="${W}" height="6" fill="#6e5547"/>
       ${Candle.svg(1160,836,470,120)}
-      <g><rect x="1340" y="720" width="150" height="118" rx="20" fill="#c87a58"/><path d="M1490 745 q50 4 46 42 q-4 34 -46 34" stroke="#c87a58" stroke-width="18" fill="none"/>
-        <path class="fz-steam" d="M1380 700 q-20 -34 0 -64 q20 -30 0 -64" stroke="#f6e6d6" stroke-width="6" fill="none" opacity=".5" stroke-linecap="round"/>
-        <path class="fz-steam d2" d="M1430 700 q-20 -34 0 -64 q20 -30 0 -64" stroke="#f6e6d6" stroke-width="6" fill="none" opacity=".5" stroke-linecap="round"/></g>`,
-      lg("cWall",[[0,"#2a1b14"],[1,"#3b271c"]])+lg("cWin",[[0,"#16223f"],[1,"#2c3a63"]])+lg("cTable",[[0,"#4a2f20"],[1,"#2a1a12"]])+Candle.defs)};
+      <g><rect x="1340" y="720" width="150" height="118" rx="20" fill="#b9755a"/><path d="M1490 745 q50 4 46 42 q-4 34 -46 34" stroke="#b9755a" stroke-width="18" fill="none"/>
+        <path class="fz-steam" d="M1380 700 q-20 -34 0 -64 q20 -30 0 -64" stroke="#f1e6da" stroke-width="6" fill="none" opacity=".5" stroke-linecap="round"/>
+        <path class="fz-steam d2" d="M1430 700 q-20 -34 0 -64 q20 -30 0 -64" stroke="#f1e6da" stroke-width="6" fill="none" opacity=".5" stroke-linecap="round"/></g>`,
+      lg("cWall",[[0,"#3a2f2a"],[1,"#4a3b33"]])+lg("cWin",[[0,"#3e4866"],[1,"#566282"]])+lg("cTable",[[0,"#5b463b"],[1,"#3a2c25"]])+Candle.defs)};
   Scenes.cozy.imm=DARK;Scenes.cozy.update=(r,p,ctx)=>Candle.update(r,ctx.raw,ctx);Scenes.cozy.bgUpdate=Scenes.cozy.update;
 
   /* ---------- Matcha ---------- */
