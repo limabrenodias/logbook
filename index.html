@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@500;700;800&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<link rel="stylesheet" href="focus.css?v=202611201150">
-<link rel="stylesheet" href="features.css?v=202611201150">
+<link rel="stylesheet" href="focus.css?v=202611201210">
+<link rel="stylesheet" href="features.css?v=202611201210">
 <style>
 :root,:root[data-theme="night"]{
   color-scheme:dark;
@@ -208,18 +208,18 @@ nav.bottom{display:none}
 <div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
 <div id="tip"></div>
 <div id="toast"></div>
-<script src="sound.js?v=202611201150"></script>
-<script src="scenes.js?v=202611201150"></script>
-<script src="backdrops.js?v=202611201150"></script>
-<script src="paintings.js?v=202611201150"></script>
-<script src="clocks.js?v=202611201150"></script>
-<script src="fx.js?v=202611201150"></script>
-<script src="points.js?v=202611201150"></script>
-<script src="focus.js?v=202611201150"></script>
-<script src="goals.js?v=202611201150"></script>
-<script src="insights.js?v=202611201150"></script>
-<script src="social.js?v=202611201150"></script>
-<script src="backup.js?v=202611201150"></script>
+<script src="sound.js?v=202611201210"></script>
+<script src="scenes.js?v=202611201210"></script>
+<script src="backdrops.js?v=202611201210"></script>
+<script src="paintings.js?v=202611201210"></script>
+<script src="clocks.js?v=202611201210"></script>
+<script src="fx.js?v=202611201210"></script>
+<script src="points.js?v=202611201210"></script>
+<script src="focus.js?v=202611201210"></script>
+<script src="goals.js?v=202611201210"></script>
+<script src="insights.js?v=202611201210"></script>
+<script src="social.js?v=202611201210"></script>
+<script src="backup.js?v=202611201210"></script>
 <script>
 "use strict";
 /* ============ CONFIG ============ */
@@ -431,7 +431,7 @@ function viewHome(){
   return roNote()+`<h1>Home</h1><p class="sub">${new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"})}</p>
   <div class="grid g4" style="margin-bottom:16px">
    <div class="stat"><div class="k">Hours logged</div><div class="v num">${H(total)}</div><div class="d">${c.logs.length} sessions</div></div>
-   <div class="stat"><div class="k">Streak</div><div class="v num">${si.cur}<small>days</small></div><div class="d">${t?"Logged today ✓":"Log today to keep it"}${si.freezes?` · ❄ ${si.freezes}`:""}</div></div>
+   <div class="stat"><div class="k">Streak</div><div class="v num">${si.cur}<small>days</small></div><div class="d">${t?"Logged today ✓":Goals.breakToday()?"On a break — streak safe":"Log today to keep it"}${si.freezes?` · ❄ ${si.freezes}`:""}</div></div>
    <div class="stat"><div class="k">Today</div><div class="v num">${t?H(t.m):"0.0"}<small>h</small></div><div class="d">${t?esc(Object.keys(t.s).join(", ")):"—"}</div></div>
    <div class="stat"><div class="k">This week</div><div class="v num">${H(wk)}<small>h</small></div><div class="d ${delta>=0?"delta-up":"delta-down"}">${delta>=0?"▲":"▼"} ${H(Math.abs(delta))} h vs last week</div></div>
   </div>

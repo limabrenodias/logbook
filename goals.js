@@ -55,14 +55,14 @@ function ring(p,size=84){const r=size/2-7,C=2*Math.PI*r;p=Math.max(0,Math.min(1,
   <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${p>=1?"var(--good)":"var(--accent)"}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-p)}" transform="rotate(-90 ${size/2} ${size/2})"/></svg>`}
 function todayCard(){
   const map=byDate();const t=today();const tm=map[t]?map[t].m:0;const c=cons();const si=streakInfo();
-  const ws=weekStart(new Date());let wk=0;const days=[];
+  const ws=weekStart(new Date());let wk=0;const days=[];const gsk=Goals.skipAll();
   for(let i=0;i<7;i++){const d=addDays(ws,i),k=ymd(d),m=map[k]?map[k].m:0;wk+=m;
-    const st=k>t?"future":si.frozen.has(k)?"frozen":m>0&&(!c.daily||m>=c.daily)?"met":m>0?"part":si.rest.has(k)||(k<=t&&(c.rest.includes(d.getDay())||Goals.skipAll().has(k))&&!m)?"rest":k===t?"today":"missed";
-    days.push(`<div class="wd wd-${st}${k===t?" is-today":""}" title="${esc(fmtDate(k))}${m?" · "+dur(m):""}"><span>${d.toLocaleDateString(undefined,{weekday:"narrow"})}</span><i>${st==="frozen"?"❄":st==="rest"?"–":st==="met"?"✓":""}</i></div>`)}
-  const p=c.daily?tm/c.daily:0;const left=Math.max(0,c.daily-tm);
+    const st=gsk.has(k)&&!m?"break":k>t?"future":si.frozen.has(k)?"frozen":m>0&&(!c.daily||m>=c.daily)?"met":m>0?"part":si.rest.has(k)||(k<=t&&(c.rest.includes(d.getDay())||Goals.skipAll().has(k))&&!m)?"rest":k===t?"today":"missed";
+    days.push(`<div class="wd wd-${st}${k===t?" is-today":""}" title="${esc(fmtDate(k))}${m?" · "+dur(m):""}"><span>${d.toLocaleDateString(undefined,{weekday:"narrow"})}</span><i>${st==="frozen"?"❄":st==="rest"?"–":st==="break"?"~":st==="met"?"✓":""}</i></div>`)}
+  const p=c.daily?tm/c.daily:0;const left=Math.max(0,c.daily-tm);const brk=readOnly()?null:Goals.breakToday();
   return `<div class="card today-card"><div class="head"><div><h2>Today</h2><p class="sub">${c.daily?`Daily goal: ${dur(c.daily)}`:"No daily goal set"} · <a href="#manage" data-g="toCons">change</a></p></div></div>
    <div class="tc-main">${c.daily?`<div class="tc-ring">${ring(p)}<div class="tc-ring-t"><b class="num">${tm}</b><small>/ ${c.daily} min</small></div></div>`:""}
-    <div class="tc-side"><div class="tc-msg">${c.daily?(tm>=c.daily?"Daily goal reached 🎉":tm?`${dur(left)} to go — you're on your way.`:readOnly()?"Nothing yet today.":`Even ${Math.min(10,c.daily)} minutes keeps the habit alive.`):tm?`${dur(tm)} today.`:"Nothing logged yet today."}</div>
+    <div class="tc-side"><div class="tc-msg">${brk&&!tm?`🌿 On a break${brk.reason?` (${esc(brk.reason)})`:""} — back ${daysBetween(today(),brk.back)===1?"tomorrow":"on "+shortDate(brk.back)}. Your streak is safe.`:c.daily?(tm>=c.daily?"Daily goal reached 🎉":tm?`${dur(left)} to go — you're on your way.`:readOnly()?"Nothing yet today.":`Even ${Math.min(10,c.daily)} minutes keeps the habit alive.`):tm?`${dur(tm)} today.`:"Nothing logged yet today."}</div>
      <div class="tc-streak"><b class="num">${si.cur}</b> day streak${si.freezes?` · <span title="Earned for every 7 days in a row; a missed day uses one automatically">❄ ${si.freezes} freeze${si.freezes>1?"s":""}</span>`:""}${si.usedRecently?` · <span class="muted">${si.usedRecently} used recently</span>`:""}</div>
      <div class="wstrip">${days.join("")}</div></div></div>
    ${c.weekly?`<div class="tc-week"><div class="row" style="justify-content:space-between;font-size:13px"><span>This week</span><span class="num">${H(wk)} / ${c.weekly} h</span></div><div class="track"><div class="fill" style="width:${Math.min(100,wk/60/c.weekly*100)}%;${wk/60>=c.weekly?"background:var(--good)":""}"></div></div></div>`:""}
@@ -112,7 +112,7 @@ function relDay(d){const n=daysBetween(d,today());return n===0?"today":n===1?"ye
 
 /* ---------- Goals ---------- */
 const G_UNIT={day:["day",1],week:["week",7],month:["month",30.44]};
-const ST_TXT={done:"Done",on:"On track",close:"Almost on track",behind:"Behind",missed:"Deadline passed",future:"Not started",nodays:"No study days left"};
+const ST_TXT={break:"On a break",done:"Done",on:"On track",close:"Almost on track",behind:"Behind",missed:"Deadline passed",future:"Not started",nodays:"No study days left"};
 const Goals={
   list(){return (Prefs.get().goals||[]).filter(g=>g&&g.rows&&g.rows.length)},
   unit(){return ui.gUnit||"week"},
@@ -121,6 +121,12 @@ const Goals={
      they don't drag down your average, and the "steady pace" marker ignores them.
      If you log time for the goal on a skipped day anyway, that day counts as normal. */
   skipSet(g){const s=new Set();for(const r of g.skips||[]){let d=parseD(r.from);const e=parseD(r.to||r.from);let n=0;while(d<=e&&n<400){s.add(ymd(d));d=addDays(d,1);n++}}return s},
+  // the planned break (consecutive skipped days) that contains day k, if any
+  breakAt(g,k,sk){sk=sk||this.skipSet(g);if(!sk.has(k)||k<g.start||k>g.deadline)return null;
+    let a=parseD(k),b=parseD(k);while(sk.has(ymd(addDays(a,-1))))a=addDays(a,-1);while(sk.has(ymd(addDays(b,1))))b=addDays(b,1);
+    const from=ymd(a),to=ymd(b);const e=(g.skips||[]).find(r=>r.from<=k&&(r.to||r.from)>=k);
+    return {from,to,back:ymd(addDays(b,1)),reason:e&&e.reason||"",days:daysBetween(from,to)+1,dayNo:daysBetween(from,k)+1}},
+  breakToday(){const t=today();for(const g of this.list())if(!g.archived){const b=this.breakAt(g,t);if(b)return {...b,goal:g}}return null},
   skipAll(){const s=new Set();for(const g of this.list())if(!g.archived)for(const d of this.skipSet(g))s.add(d);return s},
   stats(g){
     const t=today();const logs=all().logs.filter(l=>l.s===g.subject);const sk=this.skipSet(g);
@@ -135,7 +141,7 @@ const Goals={
     const calElapsed=Math.max(0,daysBetween(g.start,t)+1);
     const win=g.count==="all"?28:Math.min(28,Math.max(7,calElapsed));const winCut=ymd(addDays(new Date(),-(win-1)));
     const winDays=Math.max(1,avail(winCut,t));
-    const todaySkipped=off(t);
+    const todaySkipped=off(t);const brk=this.breakAt(g,t,sk);
     const skippedLeft=[...sk].filter(k=>k>=from&&k<=g.deadline&&off(k)).length;
     const etaFrom=n=>{let d=new Date(),c=0,guard=0;while(c<n&&guard<4000){d=addDays(d,1);if(!sk.has(ymd(d)))c++;guard++}return ymd(d)};
     const asc=[...logs].reverse();
@@ -157,9 +163,9 @@ const Goals={
       const rem=s("rem");const reachedAll=rem===0?typeRows.map(r=>r.reached).sort().pop():null;
       all_={tgt:s("tgt"),done:typeRows.reduce((a,r)=>a+Math.min(r.done,r.tgt),0),rem,expected:s("expected"),pace:s("pace"),needDay:daysLeft?s("needDay"):Infinity,todayM:s("todayM"),reached:reachedAll}}
     const order=["missed","nodays","behind","close","on","future","done"];
-    const status=rows.every(r=>r.status==="done")?"done":rows.map(r=>r.status).filter(s=>s!=="done").sort((a,b)=>order.indexOf(a)-order.indexOf(b))[0];
+    const status=rows.every(r=>r.status==="done")?"done":brk&&t>=g.start?"break":rows.map(r=>r.status).filter(s=>s!=="done").sort((a,b)=>order.indexOf(a)-order.indexOf(b))[0];
     const eta=status==="done"?all_.reached:rows.some(r=>r.rem&&!r.eta)?null:rows.map(r=>r.eta).filter(Boolean).sort().pop();
-    return {rows,all:all_,daysLeft,calLeft,totalDays,elapsedDays,status,eta,win,todaySkipped,skippedLeft,sk};
+    return {rows,all:all_,daysLeft,calLeft,totalDays,elapsedDays,status,eta,win,todaySkipped,skippedLeft,sk,brk};
   },
   need(minPerDay){const [n,mult]=G_UNIT[this.unit()];return minPerDay===Infinity?"—":`<b class="num">${fmtMin(minPerDay*mult)}</b><span>/${n}</span>`},
   balance(g){ // compare where your recent time went with the goal's split
@@ -175,6 +181,7 @@ const Goals={
     const ro=readOnly();const done=S.status==="done";
     const etaTxt=done?`Completed on ${fmtDate(S.all.reached||today())} 🎉`
       :S.status==="future"?`Starts ${fmtDate(g.start)} — ${daysBetween(today(),g.start)===1?"tomorrow":`in ${daysBetween(today(),g.start)} days`}. From then you'll need the amounts above.`
+      :S.status==="break"?`🌿 ${S.brk.days>1?`Day ${S.brk.dayNo} of ${S.brk.days} of your break`:"Break day"}${S.brk.reason?` (${esc(S.brk.reason)})`:""} — back ${daysBetween(today(),S.brk.back)===1?"tomorrow":"on "+shortDate(S.brk.back)}. Nothing is expected until then; the amounts above are what you'll need once you're back.${S.todaySkipped?"":" You logged time today, so today counts as a normal study day."}`
       :S.status==="nodays"?`Every day left before the deadline is skipped. Remove a skipped day or move the deadline.`
       :S.status==="missed"?`The deadline was ${fmtDate(g.deadline)}. ${fmtMin(a.rem)} still to go — move the date or keep going.`
       :S.eta?`At your current pace (last ${S.win} days) you'd finish on <b>${shortDate(S.eta)}</b> — ${S.eta<=g.deadline?`${daysBetween(S.eta,g.deadline)} days before`:`${daysBetween(g.deadline,S.eta)} days after`} the deadline.`
@@ -194,9 +201,9 @@ const Goals={
          <div class="g-num num">${H(r.done)}/${+r.h} h</div>
          <div class="g-need" title="Per study day — skipped days are left out">${r.rem&&S.daysLeft?this.need(r.needDay):r.rem?"—":"✓"}</div>
          <div class="g-det st-${r.status}">${det}</div></div>`}).join("")}</div>
-      ${todayBits.length?`<div class="g-today"><span class="muted">Today</span>${todayBits.join("")}</div>`:S.todaySkipped&&!done?`<div class="g-today"><span>Today is skipped — it's not counted, and the plan is spread over your other days.</span></div>`:""}
+      ${todayBits.length?`<div class="g-today"><span class="muted">Today</span>${todayBits.join("")}</div>`:S.todaySkipped&&!done&&S.status!=="break"?`<div class="g-today g-break"><span>🌿 On a break today${S.brk&&S.brk.to>today()?` until ${shortDate(S.brk.to)}`:""} — not counted, and your plan is spread over the other days.</span></div>`:""}
       ${this.skipLine(g,S)}
-      <div class="g-eta">${etaTxt}</div>
+      <div class="g-eta${S.status==="break"?" g-today g-break":""}">${etaTxt}</div>
       ${warn.map(w=>`<div class="g-warn">⚖ ${esc(w)}</div>`).join("")}
     </div>`;
   },
@@ -204,8 +211,8 @@ const Goals={
     const L=(g.skips||[]).slice().sort((a,b)=>a.from<b.from?-1:1);if(!L.length)return "";
     const n=S.sk.size;const t=today();
     const f=r=>`${shortDate(r.from)}${r.to&&r.to!==r.from?"–"+shortDate(r.to):""}${r.reason?` <span class="muted">(${esc(r.reason)})</span>`:""}`;
-    const up=L.filter(r=>(r.to||r.from)>=t),past=L.filter(r=>(r.to||r.from)<t);
-    return `<div class="g-skips"><span><b>${n}</b> day${n>1?"s":""} skipped</span>${up.length?` · coming up: ${up.slice(0,2).map(f).join(", ")}${up.length>2?` +${up.length-2}`:""}`:""}${past.length?` · <span class="muted">${past.reduce((x,r)=>x+daysBetween(r.from,r.to||r.from)+1,0)} already passed</span>`:""}${readOnly()?"":` <button class="linkb" data-gskip="${esc(g.id)}">manage</button>`}</div>`;
+    const now=L.filter(r=>r.from<=t&&(r.to||r.from)>=t),up=L.filter(r=>r.from>t),past=L.filter(r=>(r.to||r.from)<t);
+    return `<div class="g-skips"><span><b>${n}</b> day${n>1?"s":""} skipped</span>${now.length?` · now: ${now.map(f).join(", ")}`:""}${up.length?` · coming up: ${up.slice(0,2).map(f).join(", ")}${up.length>2?` +${up.length-2}`:""}`:""}${past.length?` · <span class="muted">${past.reduce((x,r)=>x+daysBetween(r.from,r.to||r.from)+1,0)} already passed</span>`:""}${readOnly()?"":` <button class="linkb" data-gskip="${esc(g.id)}">manage</button>`}</div>`;
   },
   skipSheet(id){
     const g=this.list().find(x=>x.id===id);if(!g)return;const t=today();
