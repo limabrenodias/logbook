@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@500;700;800&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<link rel="stylesheet" href="focus.css?v=202611201210">
-<link rel="stylesheet" href="features.css?v=202611201210">
+<link rel="stylesheet" href="focus.css?v=202611221930">
+<link rel="stylesheet" href="features.css?v=202611221930">
 <style>
 :root,:root[data-theme="night"]{
   color-scheme:dark;
@@ -208,18 +208,18 @@ nav.bottom{display:none}
 <div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
 <div id="tip"></div>
 <div id="toast"></div>
-<script src="sound.js?v=202611201210"></script>
-<script src="scenes.js?v=202611201210"></script>
-<script src="backdrops.js?v=202611201210"></script>
-<script src="paintings.js?v=202611201210"></script>
-<script src="clocks.js?v=202611201210"></script>
-<script src="fx.js?v=202611201210"></script>
-<script src="points.js?v=202611201210"></script>
-<script src="focus.js?v=202611201210"></script>
-<script src="goals.js?v=202611201210"></script>
-<script src="insights.js?v=202611201210"></script>
-<script src="social.js?v=202611201210"></script>
-<script src="backup.js?v=202611201210"></script>
+<script src="sound.js?v=202611221930"></script>
+<script src="scenes.js?v=202611221930"></script>
+<script src="backdrops.js?v=202611221930"></script>
+<script src="paintings.js?v=202611221930"></script>
+<script src="clocks.js?v=202611221930"></script>
+<script src="fx.js?v=202611221930"></script>
+<script src="points.js?v=202611221930"></script>
+<script src="focus.js?v=202611221930"></script>
+<script src="goals.js?v=202611221930"></script>
+<script src="insights.js?v=202611221930"></script>
+<script src="social.js?v=202611221930"></script>
+<script src="backup.js?v=202611221930"></script>
 <script>
 "use strict";
 /* ============ CONFIG ============ */
@@ -510,7 +510,11 @@ function viewManage(){
    ${sharedWithMe.length?`<p class="sub" style="margin:14px 0 6px">Shared with you: ${sharedWithMe.map(p=>"@"+esc(p.username)).join(", ")} — switch logbooks from the menu.</p>`:""}</div>
   <div class="card"><h2>Connections</h2><p class="sub">Tokens let your trackers (Anki add-on, YouTube extension, Spotify sync) add logs automatically. Treat a token like a password; delete it to disconnect that tracker.</p>
    ${tokens.map(t=>`<div class="log"><div class="main"><div class="act">${esc(t.name)}</div><div class="meta num">${esc(t.token.slice(0,6))}…${esc(t.token.slice(-4))}</div></div><button class="btn sec" data-copytok="${esc(t.token)}">Copy</button><button class="ib" data-deltok="${esc(t.token)}" title="Delete">${ICONS.del}</button></div>`).join("")||'<p class="muted">No connections yet.</p>'}
-   <div class="row" style="margin-top:10px"><input type="text" id="tokName" placeholder="Name (e.g. Anki on PC)"><button class="btn sec" data-act="newToken">Create token</button></div></div>
+   <div class="row" style="margin-top:10px"><input type="text" id="tokName" placeholder="Name (e.g. Anki on PC)"><button class="btn sec" data-act="newToken">Create token</button></div>
+   <div class="conn-ext"><b>YouTube tracker for Brave / Chrome / Edge</b>
+    <ol class="steps"><li><a href="extension/logbook-youtube.zip" download>Download the extension</a> and unzip it (right-click → Extract all).</li>
+     <li>Open <code>brave://extensions</code>, switch on <b>Developer mode</b> (top right), click <b>Load unpacked</b> and pick the unzipped <b>youtube</b> folder.</li>
+     <li>Create a token above called “YouTube on Brave”, press <b>Copy</b>, click the extension's icon → <b>Settings</b> → paste → <b>Save</b>.</li></ol></div></div>
   <div class="card"><h2>Import from Polylogger</h2><p class="sub">Pick your exported CSV. Rows already in your logbook are skipped, so importing again is safe.</p>
    <input type="file" id="csvFile" accept=".csv,text/csv"><div id="importBox"></div></div>
   ${Backup.card()}
