@@ -31,7 +31,8 @@ const Backup=(()=>{
     const P=myProfile||{};
     return JSON.stringify({app:"logbook",version:1,exported_at:new Date().toISOString(),username:P.username,
       profile:{focus:P.focus||null,subjects:P.subjects||[],types:P.types||[],prefs:Prefs.mine()},
-      logs:all().logs.map(l=>({date:l.d,subject:l.s,type:l.t,minutes:l.m,activity:l.a||"",src:l.src||"manual",created_at:l.c||null,id:l.i})),
+      logs:all().logs.map(l=>({date:l.d,subject:l.s,type:l.t,minutes:l.m,activity:l.a||"",src:l.src||"manual",created_at:l.c||null,id:l.i,resource_id:l.r||null})),
+      resources:Lib.res,scores:Lib.scores,
       device:{timeline:ls("lb-timeline",[]),points:ls("lb-points",null),focus:ls("lb-focus",null),theme:(()=>{try{return localStorage.getItem("lb-theme")}catch(_){return null}})()}},null,1);
   }
   function download(name,text,type){
@@ -58,7 +59,7 @@ const Backup=(()=>{
       <div class="bk"><div><b>All logs</b> · CSV<div class="muted">${all().logs.length} logs — every subject, type, minutes, date, source and description. Same columns as Polylogger, plus extras.</div></div><button class="btn sec sm" data-bk="logs">Download</button></div>
       <div class="bk"><div><b>Focus sessions</b> · CSV<div class="muted">${nTl} sessions on this device — date, start and end time, minutes, subject, finished or stopped early, pauses, points.</div></div><button class="btn sec sm" data-bk="focus" ${nTl?"":"disabled"}>Download</button></div>
       <div class="bk"><div><b>Focus points</b> · CSV<div class="muted">${nPts} awards on this device.</div></div><button class="btn sec sm" data-bk="points" ${nPts?"":"disabled"}>Download</button></div>
-      <div class="bk"><div><b>Full backup</b> · JSON<div class="muted">Everything in one file: logs, goals, quick logs, consistency settings, subjects, Focus sessions, points and Focus settings. Restorable below.</div></div><button class="btn sec sm" data-bk="json">Download</button></div>
+      <div class="bk"><div><b>Full backup</b> · JSON<div class="muted">Everything in one file: logs, resources, scores, goals, quick logs, consistency settings, subjects, Focus sessions, points and Focus settings. Restorable below.</div></div><button class="btn sec sm" data-bk="json">Download</button></div>
      </div>
      <label class="gchk"><input type="checkbox" id="csvSemi" ${ui.csvSemi?"checked":""}> Use semicolons (;) — pick this if Excel puts everything in one column (common with Polish or Portuguese settings)</label>
      <p class="muted" style="font-size:12.5px;margin:6px 0 0">Focus sessions and points are also saved to your account, so any device can export all of them.</p>
@@ -84,10 +85,14 @@ const Backup=(()=>{
     if(Object.keys(patch).length)await Prefs.set(patch,true);
     const sp={};if(P.subjects&&P.subjects.length)sp.subjects=[...new Set([...(myProfile.subjects||[]),...P.subjects])];if(P.types&&P.types.length)sp.types=[...new Set([...(myProfile.types||[]),...P.types])];
     if(Object.keys(sp).length)await saveSettings(sp);
+    // resources and scores: add the ones that aren't here yet
+    let addR=0;if(Lib.ok){const hr=new Set(Lib.res.map(r=>r.id)),hs=new Set(Lib.scores.map(x=>x.id));
+      const R=(B.resources||[]).filter(r=>r&&r.id&&!hr.has(r.id)).map(({user_id,...r})=>r),S=(B.scores||[]).filter(x=>x&&x.id&&!hs.has(x.id)).map(({user_id,...x})=>x);
+      if(R.length){Lib.res.push(...R);Net.write({op:"insert",t:"resources",rows:R})}if(S.length){Lib.scores.push(...S);Net.write({op:"insert",t:"scores",rows:S})}addR=R.length+S.length}
     // logs: same review + de-duplication as a CSV import
     const rows=B.logs.filter(l=>/^\d{4}-\d{2}-\d{2}$/.test(l.date)&&l.minutes>0).map(l=>({a:l.activity||"",L:l.subject,t:l.type||"Mixed",m:Math.min(l.minutes,1440),d:l.date,src:l.src||"manual"}));
     const lang={};rows.forEach(r=>{const e=lang[r.L]||(lang[r.L]={name:r.L,n:0,m:0,to:r.L});e.n++;e.m+=r.m});
-    importState={rows,langs:Object.values(lang).sort((a,b)=>b.m-a.m),box:"#restoreBox",note:`Backup from ${B.exported_at?new Date(B.exported_at).toLocaleString():"?"}${B.username?" (@"+esc(B.username)+")":""}. Restored ${addTl} Focus sessions${Object.keys(patch).length?" and your missing settings":""} on this device.`};
+    importState={rows,langs:Object.values(lang).sort((a,b)=>b.m-a.m),box:"#restoreBox",note:`Backup from ${B.exported_at?new Date(B.exported_at).toLocaleString():"?"}${B.username?" (@"+esc(B.username)+")":""}. Restored ${addTl} Focus sessions${addR?`, ${addR} resources and scores`:""}${Object.keys(patch).length?" and your missing settings":""} on this device.`};
     renderImportBox();if(box)box.scrollIntoView({block:"nearest"});
   }
   document.addEventListener("click",e=>{const b=e.target.closest("[data-bk]");if(b)run(b.dataset.bk)});

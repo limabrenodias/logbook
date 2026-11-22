@@ -12,15 +12,16 @@ const Net=(()=>{
   function init(){try{queue=JSON.parse(localStorage.getItem(K())||"[]")||[]}catch(_){queue=[]}paint()}
   function persist(){try{localStorage.setItem(K(),JSON.stringify(queue))}catch(_){}}
   const retryable=e=>!e||!e.code&&/fetch|network|load failed|timed? ?out|abort/i.test((e.message||"")+" "+(e.details||""))||e.code==="PGRST301"||/jwt expired/i.test(e.message||"");
+  // op = {op:"insert"|"update"|"delete", t: table (default logs), rows | ids+patch}
   async function run(op){
-    const T=sb.from("logs");
+    const t=op.t||"logs";
     if(op.op==="insert"){
-      const r=await sb.from("logs").insert(op.rows);if(!r.error||r.error.code!=="23505")return r.error;
+      const r=await sb.from(t).insert(op.rows);if(!r.error||r.error.code!=="23505")return r.error;
       // some of these already reached the server before the connection dropped: add the rest one by one
-      for(const row of op.rows){const x=await sb.from("logs").insert(row);if(x.error&&x.error.code!=="23505")return x.error}return null;
+      for(const row of op.rows){const x=await sb.from(t).insert(row);if(x.error&&x.error.code!=="23505")return x.error}return null;
     }
     for(let i=0;i<op.ids.length;i+=200){const ids=op.ids.slice(i,i+200);
-      const r=op.op==="update"?await sb.from("logs").update(op.patch).in("id",ids):await sb.from("logs").delete().in("id",ids);if(r.error)return r.error}
+      const r=op.op==="update"?await sb.from(t).update(op.patch).in("id",ids):await sb.from(t).delete().in("id",ids);if(r.error)return r.error}
     return null;
   }
   async function flush(){
@@ -36,7 +37,7 @@ const Net=(()=>{
   function write(op){queue.push(op);persist();Cache.save();paint();flush()}
   // put changes that haven't reached the server yet back on top of freshly loaded data
   function apply(arr){
-    for(const op of queue){
+    for(const op of queue){if(op.t&&op.t!=="logs")continue;
       if(op.op==="insert"){for(const r of op.rows)if(!arr.some(x=>x.i===r.id))arr.push(fromRow(r))}
       else{const s=new Set(op.ids);
         if(op.op==="delete"){for(let i=arr.length-1;i>=0;i--)if(s.has(arr[i].i))arr.splice(i,1)}
@@ -59,21 +60,29 @@ const Net=(()=>{
   async function resumeOnline(){
     try{const {data:{session}}=await sb.auth.getSession();if(!session)return;bootOffline=false;me=session.user.id;await startApp()}catch(_){}
   }
-  return {init,write,flush,apply,paint,get pending(){return queue.length},markOffline(){offline=true;paint()},
+  // same, for other tables whose rows are kept as they come from the database
+  function applyRaw(arr,t){
+    for(const op of queue){if(op.t!==t)continue;
+      if(op.op==="insert"){for(const r of op.rows)if(!arr.some(x=>x.id===r.id))arr.unshift({...r})}
+      else{const s=new Set(op.ids);if(op.op==="delete"){for(let i=arr.length-1;i>=0;i--)if(s.has(arr[i].id))arr.splice(i,1)}else for(const r of arr)if(s.has(r.id))Object.assign(r,op.patch)}}
+    return arr;
+  }
+  return {init,write,flush,apply,applyRaw,paint,get pending(){return queue.length},markOffline(){offline=true;paint()},
     setBootOffline(v){bootOffline=v;paint()},get bootOffline(){return bootOffline}};
 })();
 
-const COLS={d:"d",subject:"s",type:"t",minutes:"m",activity:"a",src:"src"};
+const COLS={d:"d",subject:"s",type:"t",minutes:"m",activity:"a",src:"src",resource_id:"r"};
 function patchLocal(l,patch){for(const k in patch)if(COLS[k])l[COLS[k]]=patch[k];return l}
 function newId(){if(crypto.randomUUID)return crypto.randomUUID();const b=crypto.getRandomValues(new Uint8Array(16));b[6]=b[6]&15|64;b[8]=b[8]&63|128;
   const h=[...b].map(x=>x.toString(16).padStart(2,"0")).join("");return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`}
-const toRow=l=>({id:l.i,d:l.d,subject:l.s,type:l.t,minutes:l.m,activity:l.a||"",src:l.src||"manual",created_at:l.c||new Date().toISOString(),ext_id:l.x||null});
+// resource_id is only sent when set, so the app keeps working before database update 4 is run
+const toRow=l=>{const r={id:l.i,d:l.d,subject:l.s,type:l.t,minutes:l.m,activity:l.a||"",src:l.src||"manual",created_at:l.c||new Date().toISOString(),ext_id:l.x||null};if(l.r)r.resource_id=l.r;return r};
 
 const Cache={
   save(){if(!me||viewing!==me||!myProfile)return;clearTimeout(this._t);this._t=setTimeout(()=>{
-    try{localStorage.setItem("lb-cache-"+me,JSON.stringify({at:Date.now(),profile:myProfile,logs:logsArr.map(l=>[l.i,l.d,l.s,l.t,l.m,l.a,l.src,l.c,l.x||null])}))}catch(e){console.warn("cache",e)}},400)},
+    try{localStorage.setItem("lb-cache-"+me,JSON.stringify({at:Date.now(),profile:myProfile,res:Lib.res,scores:Lib.scores,logs:logsArr.map(l=>[l.i,l.d,l.s,l.t,l.m,l.a,l.src,l.c,l.x||null,l.r||null])}))}catch(e){console.warn("cache",e)}},400)},
   load(uid){try{const o=JSON.parse(localStorage.getItem("lb-cache-"+uid)||"null");if(!o)return null;
-    return {at:o.at,profile:o.profile,logs:o.logs.map(([i,d,s,t,m,a,src,c,x])=>({i,d,s,t,m,a,src,c,x}))}}catch(_){return null}},
+    return {at:o.at,profile:o.profile,res:o.res||[],scores:o.scores||[],logs:o.logs.map(([i,d,s,t,m,a,src,c,x,r])=>({i,d,s,t,m,a,src,c,x,r}))}}catch(_){return null}},
   clear(uid){try{localStorage.removeItem("lb-cache-"+uid);localStorage.removeItem("lb-outbox-"+uid)}catch(_){}}
 };
 // The signed-in user id saved by Supabase on this device — lets the app open offline.

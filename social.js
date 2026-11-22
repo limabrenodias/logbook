@@ -56,22 +56,31 @@ const Social=(()=>{
 
   /* ---------- study rooms ---------- */
   function code(){const A="ABCDEFGHJKMNPQRSTUVWXYZ23456789";let s="";const r=crypto.getRandomValues(new Uint8Array(6));for(const x of r)s+=A[x%A.length];return s}
-  function joinRoom(c,quiet){
+  // Rooms are private when database update 4 is in place: only people who joined with the code can
+  // listen or send, and names come from the database, not from what a member's app says.
+  let names={},namesAt=0,priv=false;
+  async function refreshNames(){if(!priv||!room||Date.now()-namesAt<5000)return;namesAt=Date.now();
+    const {data,error}=await sb.rpc("room_names",{p_code:room});if(!error&&data){names={};data.forEach(r=>names[r.user_id]=r.username);rerenderRoom()}}
+  async function joinRoom(c,quiet,forcePublic){
     c=String(c||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8);if(c.length<4){toast("Room codes have 6 letters");return}
-    leaveRoom(true);room=c;members={};roomStatus="connecting";try{localStorage.setItem("lb-room",c)}catch(_){}
+    leaveRoom(true);room=c;members={};names={};namesAt=0;roomStatus="connecting";try{localStorage.setItem("lb-room",c)}catch(_){}
+    priv=false;
+    if(!forcePublic){try{const r=await sb.rpc("join_room",{p_code:c});priv=!r.error;if(priv&&sb.realtime&&sb.realtime.setAuth)await sb.realtime.setAuth()}catch(_){priv=false}}
+    if(room!==c)return;
     try{
-      ch=sb.channel("lb-room-"+c,{config:{presence:{key:me},broadcast:{self:false}}});
-      ch.on("presence",{event:"sync"},()=>{members=ch.presenceState();rerenderRoom()})
-        .on("broadcast",{event:"start"},({payload})=>{invite=payload;showInvite();rerenderRoom()})
-        .on("broadcast",{event:"wave"},({payload})=>toast(`👋 @${payload.u} says hi`))
-        .subscribe(async status=>{roomStatus=status;if(status==="SUBSCRIBED"){await ch.track({u:myProfile.username,...myState(),at:Date.now()})}
+      ch=sb.channel("lb-room-"+c,{config:{private:priv,presence:{key:me},broadcast:{self:false}}});
+      ch.on("presence",{event:"sync"},()=>{members=ch.presenceState();refreshNames();rerenderRoom()})
+        .on("broadcast",{event:"start"},({payload})=>{invite={...payload,u:names[payload.id]||(priv?"someone":payload.u)};showInvite();rerenderRoom()})
+        .on("broadcast",{event:"wave"},({payload})=>toast(`👋 @${names[payload.id]||(priv?"someone":payload.u)} says hi`))
+        .subscribe(async status=>{roomStatus=status;if(status==="SUBSCRIBED"){await ch.track({u:myProfile.username,...myState(),at:Date.now()});refreshNames()}
+          else if((status==="CHANNEL_ERROR"||status==="TIMED_OUT")&&priv&&!forcePublic){toast("Private rooms aren't switched on in Supabase yet — using an open room",5000);return joinRoom(c,true,true)}
           else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")toast("Couldn't connect to the room — check Realtime is enabled in Supabase",5000);rerenderRoom()});
     }catch(e){console.error(e);roomStatus="CHANNEL_ERROR"}
     publish(true);if(!quiet)toast("Joined room "+c);rerenderRoom();
   }
   function leaveRoom(silent){if(ch){try{sb.removeChannel(ch)}catch(_){}ch=null}const was=room;room=null;members={};roomStatus="";if(!silent){try{localStorage.removeItem("lb-room")}catch(_){}publish(true);if(was)toast("Left the room");rerenderRoom()}}
   function rerenderRoom(){if(phase==="app"&&route()==="friends"&&tab()==="together")render()}
-  function memberList(){return Object.entries(members).map(([k,v])=>({id:k,...v[v.length-1]})).sort((a,b)=>(a.id===me?-1:b.id===me?1:(a.u||"").localeCompare(b.u||"")))}
+  function memberList(){return Object.entries(members).map(([k,v])=>({...v[v.length-1],id:k,u:names[k]||(priv?"…":v[v.length-1].u)})).sort((a,b)=>(a.id===me?-1:b.id===me?1:(a.u||"").localeCompare(b.u||"")))}
   function startTogether(min){
     if(!room)return;min=Math.max(5,Math.min(180,min|0));const endAt=Date.now()+min*60000;
     if(!Focus.joinAt(endAt))return;
@@ -117,7 +126,7 @@ const Social=(()=>{
     return `<div class="grid g2 soc-top">
       <div class="card"><h2>Add a friend</h2><p class="sub">They'll see your daily totals, what you're focusing on and your logs (descriptions only if you allow it in Setup).</p>
         <div class="row"><input type="text" id="frUser" placeholder="Their username" autocapitalize="none" style="flex:1;min-width:140px"><button class="btn" data-s="addFriend">Send request</button></div>
-        ${inc.length?`<div class="req"><h3>Requests</h3>${inc.map(f=>`<div class="fr"><div class="av">${ini(f.username)}</div><div class="fr-main"><div class="fr-n">@${esc(f.username)}</div><div class="fr-s">wants to be friends</div></div><button class="btn sm" data-acc="${esc(f.id)}">Accept</button><button class="btn sec sm" data-dec="${esc(f.id)}">Decline</button></div>`).join("")}</div>`:""}
+        ${inc.length?`<div class="req"><h3>Requests</h3>${inc.map(f=>`<div class="fr"><div class="av">${ini(f.username)}</div><div class="fr-main"><div class="fr-n">@${esc(f.username)}</div><div class="fr-s">wants to be friends</div></div><button class="btn sm" data-acc="${esc(f.id)}">Accept</button><button class="btn sec sm" data-dec="${esc(f.id)}">Decline</button><button class="ib" data-block="${esc(f.id)}" data-bname="${esc(f.username)}" title="Block @${esc(f.username)}">⛔</button></div>`).join("")}</div>`:""}
         ${out.length?`<p class="sub" style="margin:12px 0 0">Waiting for: ${out.map(f=>`@${esc(f.username)} <button class="linkb" data-dec="${esc(f.id)}">cancel</button>`).join(", ")}</p>`:""}</div>
       <div class="card"><h2>Your friends</h2><p class="sub">Live status updates every minute.</p>
         <div class="fr-list">${fr.map(f=>friendCard(f)+(f.room?`<div class="fr-room">In room <b>${esc(f.room)}</b> <button class="linkb" data-roomj="${esc(f.room)}">join room</button></div>`:"")).join("")||'<div class="muted">No friends yet — add someone by username.</div>'}</div>
@@ -171,12 +180,16 @@ const Social=(()=>{
     return `<h1>Friends</h1><p class="sub">Study with friends, see what they're doing, and how your languages' communities are going.</p>
       <div class="seg" style="margin-bottom:16px">${[["activity","Activity"+(inc?` (${inc})`:"")],["communities","Communities"],["together","Study together"+(room?" •":"")]].map(([k,l])=>`<button class="${k===t?"on":""}" data-soctab="${k}">${l}</button>`).join("")}</div>${body}`;
   }
+  let blocked=null;
   function privacyCard(){
     const ps=prefsSocial();
+    if(blocked===null&&ok!==false){blocked=[];sb.rpc("blocked_list").then(r=>{if(!r.error){blocked=r.data||[];if(route()==="manage"&&blocked.length)render()}})}
     return `<div class="card"><h2>Friends & privacy</h2><p class="sub">Friends always see your daily totals, subjects, types and live Focus status.</p>
       <label class="gchk"><input type="checkbox" data-priv="details" ${ps.details?"checked":""}> Show my log descriptions to friends</label>
-      <label class="gchk"><input type="checkbox" data-priv="community" ${ps.community?"checked":""}> Appear on community boards (username + hours per subject)</label></div>`;
+      <label class="gchk"><input type="checkbox" data-priv="community" ${ps.community?"checked":""}> Appear on community boards (username + hours per subject)</label>
+      ${blocked&&blocked.length?`<p class="sub" style="margin:10px 0 4px">Blocked: ${blocked.map(b=>`@${esc(b.username)} <button class="linkb" data-unblock="${esc(b.id)}">unblock</button>`).join(" · ")}</p>`:""}</div>`;
   }
+
 
   /* ---------- events ---------- */
   document.addEventListener("click",async e=>{
@@ -186,8 +199,12 @@ const Social=(()=>{
       const {error}=await sb.rpc("react",{p_log:x.log_id,p_emoji:next});if(error){fail(error,"Couldn't react");load(true).then(render)}return}
     const ac=e.target.closest("[data-acc]");if(ac){const {error}=await sb.rpc("friend_respond",{p_user:ac.dataset.acc,p_accept:true});if(error)return fail(error);await load(true);render();toast("You're now friends");return}
     const dc=e.target.closest("[data-dec]");if(dc){const {error}=await sb.rpc("friend_respond",{p_user:dc.dataset.dec,p_accept:false});if(error)return fail(error);await load(true);render();return}
-    const rm=e.target.closest("[data-rmf]");if(rm){const b=$("#rmBox");if(b)b.innerHTML=`<div class="row" style="margin-top:8px">${friends.filter(f=>f.status==="friend").map(f=>`<button class="btn sec sm" data-rmid="${esc(f.id)}">Remove @${esc(f.username)}</button>`).join("")}</div>`;return}
+    const rm=e.target.closest("[data-rmf]");if(rm){const b=$("#rmBox");if(b)b.innerHTML=`<div class="row" style="margin-top:8px">${friends.filter(f=>f.status==="friend").map(f=>`<button class="btn sec sm" data-rmid="${esc(f.id)}">Remove @${esc(f.username)}</button><button class="btn sec sm" data-block="${esc(f.id)}" data-bname="${esc(f.username)}">Block</button>`).join("")}</div>`;return}
     const ri=e.target.closest("[data-rmid]");if(ri){if(!ri.classList.contains("confirm")){ri.classList.add("confirm");ri.textContent="Tap again to remove";return}const {error}=await sb.rpc("friend_respond",{p_user:ri.dataset.rmid,p_accept:false});if(error)return fail(error);await load(true);render();toast("Friend removed");return}
+    const bl=e.target.closest("[data-block]");if(bl){if(!bl.classList.contains("confirm")){bl.classList.add("confirm");bl.textContent="Block @"+bl.dataset.bname+"?";return}
+      const {error}=await sb.rpc("block_user",{p_user:bl.dataset.block});if(error)return fail(error,/function|schema cache/i.test(error.message)?"Run supabase-update-4.sql in Supabase first":"Couldn't block");
+      await load(true);blocked=null;render();toast("@"+bl.dataset.bname+" is blocked — they can't find you or send requests");return}
+    const ub=e.target.closest("[data-unblock]");if(ub){const {error}=await sb.from("blocks").delete().eq("blocker",me).eq("blocked",ub.dataset.unblock);if(error)return fail(error);blocked=null;render();toast("Unblocked");return}
     const jf=e.target.closest("[data-joinf]");if(jf){const f=friends.find(x=>x.id===jf.dataset.joinf);if(!f)return;if(f.room&&f.room!==room)joinRoom(f.room,true);joinAt(Date.parse(f.ends_at));return}
     const ja=e.target.closest("[data-joinat]");if(ja){joinAt(+ja.dataset.joinat);return}
     const rj=e.target.closest("[data-roomj]");if(rj){joinRoom(rj.dataset.roomj);ui.socTab="together";render();return}
@@ -196,7 +213,7 @@ const Social=(()=>{
     const a=e.target.closest("[data-s]");if(!a)return;const k=a.dataset.s;
     if(k==="addFriend"){const u=($("#frUser").value||"").trim().toLowerCase().replace(/^@/,"");if(!u)return;
       const {data,error}=await sb.rpc("friend_request",{p_username:u});if(error)return fail(error);
-      toast(data==="not_found"?"No user called @"+u:data==="self"?"That's you 🙂":data==="accepted"?"You're now friends with @"+u:"Request sent to @"+u);await load(true);render()}
+      toast(data==="rate_limited"?"That's a lot of requests today — try again tomorrow":data==="not_found"?"No user called @"+u:data==="self"?"That's you 🙂":data==="accepted"?"You're now friends with @"+u:"Request sent to @"+u);await load(true);render()}
     else if(k==="optIn"){await Prefs.set({social:{...prefsSocial(),community:true}},true);commKey="";render();toast("You're on the community boards")}
     else if(k==="newRoom"){joinRoom(code(),true);ui.socTab="together";render()}
     else if(k==="joinRoom"){joinRoom($("#roomCode").value);render()}
@@ -204,7 +221,7 @@ const Social=(()=>{
     else if(k==="copyRoom"){const u=location.origin+location.pathname+"?room="+room;navigator.clipboard.writeText(u).then(()=>toast("Invite link copied")).catch(()=>toast("Room code: "+room,6000))}
     else if(k==="startTog")startTogether(parseInt($("#togMin").value,10)||25);
     else if(k==="moreFeed"){ui.feedLim=(ui.feedLim||30)+50;render()}
-    else if(k==="wave"){if(ch)ch.send({type:"broadcast",event:"wave",payload:{u:myProfile.username}});toast("👋 sent")}
+    else if(k==="wave"){if(ch)ch.send({type:"broadcast",event:"wave",payload:{u:myProfile.username,id:me}});toast("👋 sent")}
     else if(k==="joinInvite"&&invite)joinAt(invite.endAt);
     else if(k==="hideInvite"){invite=null;showInvite()}
   });
@@ -217,6 +234,6 @@ const Social=(()=>{
     if(p){history.replaceState(null,"",location.pathname+location.hash);joinRoom(p);ui.socTab="together";location.hash="#friends"}
     else{let r=null;try{r=localStorage.getItem("lb-room")}catch(_){}if(r)joinRoom(r,true)}
   }
-  function stop(){leaveRoom(true);try{localStorage.removeItem("lb-room")}catch(_){}ok=null;friends=[];feed=[];toMe=[];boards=[];comm=null;commKey=""}
+  function stop(){blocked=null;leaveRoom(true);try{localStorage.removeItem("lb-room")}catch(_){}ok=null;friends=[];feed=[];toMe=[];boards=[];comm=null;commKey=""}
   return {view,homeCard,privacyCard,start,stop,load,publish,get ok(){return ok}};
 })();
