@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@500;700;800&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<link rel="stylesheet" href="focus.css?v=202611221930">
-<link rel="stylesheet" href="features.css?v=202611221930">
+<link rel="stylesheet" href="focus.css?v=202611222210">
+<link rel="stylesheet" href="features.css?v=202611222210">
 <style>
 :root,:root[data-theme="night"]{
   color-scheme:dark;
@@ -208,18 +208,18 @@ nav.bottom{display:none}
 <div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
 <div id="tip"></div>
 <div id="toast"></div>
-<script src="sound.js?v=202611221930"></script>
-<script src="scenes.js?v=202611221930"></script>
-<script src="backdrops.js?v=202611221930"></script>
-<script src="paintings.js?v=202611221930"></script>
-<script src="clocks.js?v=202611221930"></script>
-<script src="fx.js?v=202611221930"></script>
-<script src="points.js?v=202611221930"></script>
-<script src="focus.js?v=202611221930"></script>
-<script src="goals.js?v=202611221930"></script>
-<script src="insights.js?v=202611221930"></script>
-<script src="social.js?v=202611221930"></script>
-<script src="backup.js?v=202611221930"></script>
+<script src="sound.js?v=202611222210"></script>
+<script src="scenes.js?v=202611222210"></script>
+<script src="backdrops.js?v=202611222210"></script>
+<script src="paintings.js?v=202611222210"></script>
+<script src="clocks.js?v=202611222210"></script>
+<script src="fx.js?v=202611222210"></script>
+<script src="points.js?v=202611222210"></script>
+<script src="focus.js?v=202611222210"></script>
+<script src="goals.js?v=202611222210"></script>
+<script src="insights.js?v=202611222210"></script>
+<script src="social.js?v=202611222210"></script>
+<script src="backup.js?v=202611222210"></script>
 <script>
 "use strict";
 /* ============ CONFIG ============ */
@@ -341,9 +341,16 @@ async function saveLog(e,old){
     if(error){logsArr=logsArr.filter(x=>x!==tmp);invalidate();render();return fail(error,"Couldn't save the log")}
     tmp.i=data.id;tmp.c=data.created_at;return tmp;}
 }
-async function deleteLog(l){
+async function deleteLog(l,withUndo){
   logsArr=logsArr.filter(x=>x.i!==l.i);invalidate();render();
-  const {error}=await sb.from("logs").delete().eq("id",l.i);if(error){fail(error,"Couldn't delete");await refresh()}
+  // ask the database for the deleted row back, so Undo can restore it exactly (same id, time and tracker link)
+  const p=Promise.resolve(sb.from("logs").delete().eq("id",l.i).select());   // run the request once and share the result
+  if(withUndo)actionToast(`Log deleted · ${dur(l.m)} of ${l.s}`,"Undo",async()=>{
+    const {data,error}=await p;if(error)return;const row=data&&data[0];
+    logsArr.push(l);invalidate();render();
+    const r=await sb.from("logs").insert(row||{d:l.d,subject:l.s,type:l.t,minutes:l.m,activity:l.a||"",src:l.src||"manual",created_at:l.c});
+    if(r.error){logsArr=logsArr.filter(x=>x!==l);invalidate();render();fail(r.error,"Couldn't restore the log")}else toast("Log restored")},8000);
+  const {error}=await p;if(error){fail(error,"Couldn't delete");await refresh()}
 }
 async function saveSettings(patch){
   if(readOnly())return;
@@ -625,7 +632,7 @@ function stopSave(){
 document.addEventListener("click",async e=>{
   const a=e.target.closest("[data-act],[data-edit],[data-del],[data-mode],[data-r],[data-unpin],[data-untype],[data-unshare],[data-copytok],[data-deltok]");if(!a)return;
   if(a.dataset.edit){const l=all().logs.find(x=>x.i===a.dataset.edit);if(l)openModal(l);return}
-  if(a.dataset.del){if(a.classList.contains("confirm")){const l=all().logs.find(x=>x.i===a.dataset.del);if(l){deleteLog(l);toast("Log deleted")}return}a.classList.add("confirm");a.textContent="Delete?";setTimeout(()=>{if(a.isConnected){a.classList.remove("confirm");a.innerHTML=ICONS.del}},3000);return}
+  if(a.dataset.del){if(a.classList.contains("confirm")){const l=all().logs.find(x=>x.i===a.dataset.del);if(l)deleteLog(l,true);return}a.classList.add("confirm");a.textContent="Delete?";setTimeout(()=>{if(a.isConnected){a.classList.remove("confirm");a.innerHTML=ICONS.del}},3000);return}
   if(a.dataset.mode&&modalState){modalState.mode=a.dataset.mode;renderModeBody(null);return}
   if(a.dataset.r){ui.range=a.dataset.r;render();return}
   if(a.dataset.unpin){saveSettings({subjects:(settings().subjects||[]).filter(s=>s!==a.dataset.unpin)});return}
