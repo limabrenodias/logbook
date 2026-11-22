@@ -61,7 +61,7 @@ const Backup=(()=>{
       <div class="bk"><div><b>Full backup</b> · JSON<div class="muted">Everything in one file: logs, goals, quick logs, consistency settings, subjects, Focus sessions, points and Focus settings. Restorable below.</div></div><button class="btn sec sm" data-bk="json">Download</button></div>
      </div>
      <label class="gchk"><input type="checkbox" id="csvSemi" ${ui.csvSemi?"checked":""}> Use semicolons (;) — pick this if Excel puts everything in one column (common with Polish or Portuguese settings)</label>
-     <p class="muted" style="font-size:12.5px;margin:6px 0 0">Focus sessions and points are kept on each device separately — export from every device you use Focus on.</p>
+     <p class="muted" style="font-size:12.5px;margin:6px 0 0">Focus sessions and points are also saved to your account, so any device can export all of them.</p>
      <h3 style="font-size:14px;margin:18px 0 4px">Restore</h3><p class="sub" style="margin-bottom:8px">Pick a full backup (.json) or a logs CSV from here or Polylogger. Logs you already have are skipped, so restoring twice is safe.</p>
      <input type="file" id="restoreFile" accept=".json,.csv,application/json,text/csv"><div id="restoreBox"></div></div>`;
   }

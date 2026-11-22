@@ -23,7 +23,11 @@ const G_ICON={
 function fmtMin(v){v=Math.max(0,v);return v<60?Math.ceil(v)+" min":(v/60).toFixed(v<600?1:0)+" h"}
 function shortDate(s){return parseD(s).toLocaleDateString(undefined,{day:"numeric",month:"short",year:parseD(s).getFullYear()!==new Date().getFullYear()?"numeric":undefined})}
 function cons(){const p=Prefs.get();return {daily:p.daily===undefined?30:+p.daily||0,weekly:+p.weekly||0,rest:Array.isArray(p.rest)?p.rest:[],freezes:p.freezes!==false}}
+// the most recent "Undo" offered anywhere — Ctrl/Cmd+Z runs it too
+let lastUndo=null;
+function runUndo(){if(!lastUndo||Date.now()>lastUndo.until)return false;const u=lastUndo;lastUndo=null;const t=document.getElementById("toastA");if(t)t.style.display="none";u.fn();return true}
 function actionToast(msg,label,fn,ms=6000){
+  if(label==="Undo")lastUndo={fn,until:Date.now()+Math.max(ms,30000)};
   let t=document.getElementById("toastA");if(!t){t=document.createElement("div");t.id="toastA";document.body.appendChild(t)}
   t.innerHTML=`<span>${esc(msg)}</span>${label?`<button>${esc(label)}</button>`:""}`;t.style.display="flex";
   const b=t.querySelector("button");if(b)b.onclick=()=>{t.style.display="none";fn()};
@@ -243,7 +247,8 @@ const Goals={
     const skips=[...(g.skips||[]),{from:a,to:b,reason:why}];
     await this.patch(id,{skips});toast(a===b?"Day skipped":`${daysBetween(a,b)+1} days skipped`);this.skipSheet(id);
   },
-  async unskip(id,i){const g=this.list().find(x=>x.id===id);if(!g)return;const skips=(g.skips||[]).filter((_,j)=>j!==i);await this.patch(id,{skips});this.skipSheet(id)},
+  async unskip(id,i){const g=this.list().find(x=>x.id===id);if(!g)return;const prev=g.skips||[];const skips=prev.filter((_,j)=>j!==i);await this.patch(id,{skips});this.skipSheet(id);
+    actionToast("Skipped day removed","Undo",async()=>{await this.patch(id,{skips:prev});if($("#skFrom"))this.skipSheet(id)})},
   card(){
     const L=this.list();const ro=readOnly();const act=L.filter(g=>!g.archived);const arch=L.filter(g=>g.archived);
     if(!L.length&&ro)return "";
@@ -295,7 +300,8 @@ const Goals={
     if(g.start>g.deadline)return toast("The start date is after the deadline");
     const L=[...(Prefs.mine().goals||[])];const i=L.findIndex(x=>x.id===id);
     if(i>=0)L[i]={...L[i],...g};else L.push({...g,id:Date.now().toString(36),created:today()});
-    closeModal();await Prefs.set({goals:L});toast(i>=0?"Goal updated":"Goal saved");
+    const prev=[...(Prefs.mine().goals||[])];closeModal();await Prefs.set({goals:L});
+    actionToast(i>=0?"Goal updated":"Goal saved","Undo",()=>Prefs.set({goals:prev}),8000);
   },
   async patch(id,p){const L=[...(Prefs.mine().goals||[])].map(g=>g.id===id?{...g,...p}:g);await Prefs.set({goals:L})}
 };
@@ -316,16 +322,18 @@ document.addEventListener("click",async e=>{
   const qf=e.target.closest("[data-qfill]");if(qf){const q=Quick.list().find(x=>x.id===qf.dataset.qfill);if(!q)return;$("#fA").value=q.a;const sel=$("#fS");if(![...sel.options].some(o=>o.value===q.s))sel.insertAdjacentHTML("afterbegin",`<option>${esc(q.s)}</option>`);sel.value=q.s;$("#fT").value=q.t;if(modalState&&modalState.mode!=="manual"){modalState.mode="manual";renderModeBody(null)}const fm=$("#fM");if(fm)fm.value=q.m;document.querySelectorAll(".qchip.on").forEach(b=>b.classList.remove("on"));qf.classList.add("on");return}
   const q=e.target.closest("[data-qlog]");if(q){Quick.log(q.dataset.qlog);return}
   const qs=e.target.closest("[data-qsug]");if(qs){const x=Quick._sug[+qs.dataset.qsug];if(x){$("#qA").value=x.a;$("#qS").value=x.s;$("#qT").value=x.t;$("#qM").value=x.m;document.querySelectorAll(".qs.on").forEach(b=>b.classList.remove("on"));qs.classList.add("on");$("#qA").focus()}return}
-  const qd=e.target.closest("[data-qdel]");if(qd){const L=[...Quick.list()];L.splice(+qd.dataset.qdel,1);await Prefs.set({quick:L},true);Quick.sheet();render();return}
+  const qd=e.target.closest("[data-qdel]");if(qd){const prev=[...Quick.list()];const L=[...prev];const [gone]=L.splice(+qd.dataset.qdel,1);await Prefs.set({quick:L},true);Quick.sheet();render();
+    actionToast(`Removed “${gone.a||gone.t}”`,"Undo",async()=>{await Prefs.set({quick:prev},true);if($("#qA"))Quick.sheet();render()});return}
   const qu=e.target.closest("[data-qup]");if(qu){const i=+qu.dataset.qup;if(!i)return;const L=[...Quick.list()];[L[i-1],L[i]]=[L[i],L[i-1]];await Prefs.set({quick:L},true);Quick.sheet();render();return}
   const gu=e.target.closest("[data-gunit]");if(gu){ui.gUnit=gu.dataset.gunit;render();return}
   const ge=e.target.closest("[data-gedit]");if(ge){Goals.editor(ge.dataset.gedit);return}
   const gs=e.target.closest("[data-gskip]");if(gs){Goals.skipSheet(gs.dataset.gskip);return}
   const gu2=e.target.closest("[data-gunskip]");if(gu2){Goals.unskip(gu2.dataset.id,+gu2.dataset.gunskip);return}
-  const ga=e.target.closest("[data-garch]");if(ga){Goals.patch(ga.dataset.garch,{archived:true});toast("Goal archived");return}
+  const ga=e.target.closest("[data-garch]");if(ga){const id=ga.dataset.garch;Goals.patch(id,{archived:true});actionToast("Goal archived","Undo",()=>Goals.patch(id,{archived:false}));return}
   const gn=e.target.closest("[data-gunarch]");if(gn){Goals.patch(gn.dataset.gunarch,{archived:false});return}
   const gd=e.target.closest("[data-gdel]");if(gd){if(!gd.classList.contains("confirm")){gd.classList.add("confirm");gd.textContent="Delete goal?";return}
-    const L=(Prefs.mine().goals||[]).filter(g=>g.id!==gd.dataset.gdel);closeModal();await Prefs.set({goals:L});toast("Goal deleted");return}
+    const prev=[...(Prefs.mine().goals||[])];const L=prev.filter(g=>g.id!==gd.dataset.gdel);closeModal();await Prefs.set({goals:L});
+    actionToast("Goal deleted","Undo",()=>Prefs.set({goals:prev}),8000);return}
   const cr=e.target.closest("[data-crest]");if(cr){cr.classList.toggle("on");return}
   const a=e.target.closest("[data-g]");if(!a)return;const k=a.dataset.g;
   if(k==="quick")Quick.sheet();

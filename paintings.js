@@ -45,7 +45,7 @@
   let uid=0;
   function svgFor(sc,mode){
     const A=sc.art_,VW=1000,VH=Math.round(1000*A.h/A.w),src=CM(A.file),id=(mode==="bg"?"pb":"pa")+(++uid);
-    const living=Scenes._living!==false&&!matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const living=Scenes._living!==false&&!(typeof reduceMotion==="function"?reduceMotion():matchMedia("(prefers-reduced-motion: reduce)").matches);
     const L=sc.live,sc_=mode==="bg"?1:.6;
     const img=(x="")=>`<image class="pt-img" href="${src}" ${A.local?`data-fallback="${A.local}"`:""} x="0" y="0" width="${VW}" height="${VH}" preserveAspectRatio="xMidYMid slice" ${x}/>`;
     let defs=`<filter id="${id}F" x="0" y="0" width="100%" height="100%"><feTurbulence class="lv-t" data-bx="${L.bf[0]}" data-by="${L.bf[1]}" type="fractalNoise" baseFrequency="${L.bf[0]} ${L.bf[1]}" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="${L.scale*sc_}" xChannelSelector="R" yChannelSelector="G"/></filter>

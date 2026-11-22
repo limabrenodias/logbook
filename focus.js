@@ -47,7 +47,7 @@ const Focus=(()=>{
   /* ---------- focus timeline (this device) ---------- */
   const TLK="lb-timeline";
   function tlLoad(){try{return JSON.parse(localStorage.getItem(TLK)||"[]")}catch(_){return []}}
-  function tlSave(a){try{localStorage.setItem(TLK,JSON.stringify(a.slice(-2000)))}catch(_){}}
+  function tlSave(a){try{localStorage.setItem(TLK,JSON.stringify(a.slice(-3000)))}catch(_){}}
   function segOpen(){st.segs=st.segs||[];const l=st.segs[st.segs.length-1];if(!l||l[1])st.segs.push([Date.now(),null])}
   function segClose(at){const l=(st.segs||[])[(st.segs||[]).length-1];if(l&&!l[1])l[1]=Math.max(l[0],at||Date.now())}
   function record(full,award,minOverride){
@@ -433,5 +433,6 @@ const Focus=(()=>{
     start(true);if(mounted)rerender();return true;
   }
   function state(){const tk=task();return {phase:st.phase,running:st.running,started:!!st.startedAt,endAt:st.running?st.endAt:null,remain:remaining(),total:total(),s:tk.s,t:tk.t,focusMin:T().f}}
-  return{render,unmount,paint,joinAt,state,get running(){return st.running}};
+  function reloadCfg(){cfg=load();delete cfg._st;Scenes._living=cfg.living!==false;if(mounted)rerender()}
+  return{render,unmount,paint,joinAt,state,reloadCfg,get running(){return st.running}};
 })();

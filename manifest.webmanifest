@@ -1,1 +1,64 @@
-{"name":"Logbook","short_name":"Logbook","start_url":"./","display":"standalone","background_color":"#111110","theme_color":"#111110","icons":[{"src":"icon.png","sizes":"512x512","type":"image/png"}]}
+{
+ "id": "./",
+ "name": "Logbook",
+ "short_name": "Logbook",
+ "description": "Your study time, on every device.",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#111110",
+ "theme_color": "#111110",
+ "orientation": "any",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icon.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-maskable.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ],
+ "shortcuts": [
+  {
+   "name": "Add a log",
+   "short_name": "New log",
+   "url": "./?action=new",
+   "icons": [
+    {
+     "src": "icon-192.png",
+     "sizes": "192x192"
+    }
+   ]
+  },
+  {
+   "name": "Start Focus",
+   "short_name": "Focus",
+   "url": "./?action=focus",
+   "icons": [
+    {
+     "src": "icon-192.png",
+     "sizes": "192x192"
+    }
+   ]
+  },
+  {
+   "name": "Insights",
+   "url": "./?action=insights",
+   "icons": [
+    {
+     "src": "icon-192.png",
+     "sizes": "192x192"
+    }
+   ]
+  }
+ ]
+}

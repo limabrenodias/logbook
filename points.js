@@ -37,7 +37,7 @@ const Points=(()=>{
     tick(st);const min=Math.round((st.credit||0)/60000);
     if(!st.presenceAt||min<1){L.chain={n:0,due:null};save();return null}
     const n=full?st.chainN||1:1;const s=score(min,focusMin,n,st.delay,full);
-    L.total+=s.total;L.hist.unshift({t:Date.now(),d:day(Date.now()),min,n,...s});L.hist=L.hist.slice(0,400);
+    L.total+=s.total;L.hist.unshift({t:Date.now(),d:day(Date.now()),min,n,...s});L.hist=L.hist.slice(0,5000);
     L.chain=full?{n,due:Date.now()+breakMin*60000}:{n:0,due:null};save();return {...s,min,n};
   }
   function skipBreak(){if(L.chain.n>0){L.chain.due=Math.min(L.chain.due??Date.now(),Date.now());save()}}
@@ -45,5 +45,14 @@ const Points=(()=>{
   function summary(){const today=day(Date.now());const wk=Date.now()-6*864e5;let t=0,w=0;for(const h of L.hist){if(h.d===today)t+=h.total;if(h.t>=wk)w+=h.total}
     const c=L.chain;const live=c.n>0&&(c.due==null||Date.now()-c.due<=GRACE);
     return {total:L.total,today:t,week:w,chain:live?c.n:0,due:live?c.due:null,recent:L.hist.slice(0,8),graceMin:GRACE/60000}}
-  return {begin,confirm,tick,pause,resume,needsPresence,finish,skipBreak,abandon,summary,score};
+  // across devices: every award ever made is kept in your account; merge them in and recount
+  function awards(){return L.hist.slice()}
+  function merge(list){
+    const seen=new Set(L.hist.map(h=>+h.t));let added=0;
+    for(const h of list||[])if(h&&h.t!=null&&!seen.has(+h.t)){L.hist.push(h);seen.add(+h.t);added++}
+    L.hist.sort((a,b)=>b.t-a.t);L.hist=L.hist.slice(0,5000);
+    const sum=L.hist.reduce((a,h)=>a+(h.total||0),0);const before=L.total;L.total=Math.max(L.total,sum);
+    if(added||L.total!==before)save();return added;
+  }
+  return {begin,confirm,tick,pause,resume,needsPresence,finish,skipBreak,abandon,summary,score,awards,merge};
 })();

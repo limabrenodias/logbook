@@ -6,3 +6,5 @@ Personal study-time tracker (languages, aviation, programming…) with Supabase 
 - `supabase-setup.sql` — database setup (run in Supabase SQL Editor)
 - `supabase-social.sql` — update 2: synced goals/quick logs, friends, reactions, communities, live status (run once after the setup file)
 - Study together rooms use Supabase Realtime (Broadcast + Presence on public channels) — nothing to set up if Realtime is on.
+- `supabase-update-3.sql` — update 3: Focus sessions and points saved to your account, and account deletion (run once)
+- `sw.js` — offline support; the app also keeps a copy of your logbook and an outbox of unsent changes on each device

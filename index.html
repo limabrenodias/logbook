@@ -2,19 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#111110">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Logbook">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233987e5'/%3E%3Cpath d='M18 46V18h6v22h22v6z' fill='white'/%3E%3C/svg%3E">
-<link rel="apple-touch-icon" href="icon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <title>Logbook</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@500;700;800&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<link rel="stylesheet" href="focus.css?v=202611222210">
-<link rel="stylesheet" href="features.css?v=202611222210">
+<link rel="stylesheet" href="focus.css?v=202611230330">
+<link rel="stylesheet" href="features.css?v=202611230330">
 <style>
 :root,:root[data-theme="night"]{
   color-scheme:dark;
@@ -24,20 +26,21 @@
   --danger:#e66767;--good:#0ca30c;
   --h0:#2d2d2a;--h1:#184f95;--h2:#256abf;--h3:#3987e5;--h4:#6da7ec;--h5:#b7d3f6;
   --series-1:#3987e5;
+  --accent-strong:#1d72d9;
 }
 :root[data-theme="daylight"]{
   color-scheme:light;
   --bg:#f4f4f2;--surface-1:#fcfcfb;--surface-2:#f0efec;--surface-3:#e4e3df;--border:#dddcd6;
-  --text-primary:#0b0b0b;--text-secondary:#52514e;--text-muted:#7b7a74;
-  --accent:#2a78d6;--accent-ink:#ffffff;--accent-soft:rgba(42,120,214,.12);--danger:#c93a39;--good:#008300;
+  --text-primary:#0b0b0b;--text-secondary:#52514e;--text-muted:#6c6b66;
+  --accent:#256bbf;--accent-ink:#ffffff;--accent-soft:rgba(42,120,214,.12);--danger:#c93a39;--good:#008300;
   --h0:#e4e3df;--h1:#cde2fb;--h2:#9ec5f4;--h3:#5598e7;--h4:#256abf;--h5:#104281;
   --series-1:#2a78d6;
 }
 :root[data-theme="matcha"]{
   color-scheme:light;
   --bg:#efebe2;--surface-1:#faf8f3;--surface-2:#f1ede4;--surface-3:#e6e0d3;--border:#e0d9ca;
-  --text-primary:#3c3832;--text-secondary:#6b6357;--text-muted:#958b7c;
-  --accent:#6d8a4f;--accent-ink:#ffffff;--accent-soft:rgba(109,138,79,.15);--danger:#b4594b;--good:#5d8a3a;
+  --text-primary:#3c3832;--text-secondary:#6b6357;--text-muted:#70675a;
+  --accent:#587040;--accent-ink:#ffffff;--accent-soft:rgba(109,138,79,.15);--danger:#b4594b;--good:#5d8a3a;
   --h0:#e6e0d3;--h1:#d3e0c1;--h2:#afc791;--h3:#8aab66;--h4:#668945;--h5:#46652b;
   --series-1:#6d8a4f;
 }
@@ -60,8 +63,8 @@
 :root[data-theme="sakura"]{
   color-scheme:light;
   --bg:#f7efef;--surface-1:#fffafa;--surface-2:#f6eaea;--surface-3:#eedcdc;--border:#ead6d7;
-  --text-primary:#3a2e33;--text-secondary:#6d5a61;--text-muted:#9a868d;
-  --accent:#c9667f;--accent-ink:#ffffff;--accent-soft:rgba(201,102,127,.13);--danger:#b8433f;--good:#4f8a4a;
+  --text-primary:#3a2e33;--text-secondary:#6d5a61;--text-muted:#77646a;
+  --accent:#b5405e;--accent-ink:#ffffff;--accent-soft:rgba(201,102,127,.13);--danger:#b8433f;--good:#4f8a4a;
   --h0:#eedcdc;--h1:#f4d2db;--h2:#ebaabd;--h3:#dc839c;--h4:#c25f7a;--h5:#933f58;
   --series-1:#c9667f;
 }
@@ -97,16 +100,16 @@ h2{font-size:16px;margin:0 0 2px;font-weight:600}
 .stat .d{font-size:12.5px;color:var(--text-secondary);margin-top:2px}
 .head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 .head .sub{margin:0}
-select,input[type=text],input[type=number],input[type=date],input[type=search],textarea{background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:8px 11px;min-height:38px;outline:none}
+select,input[type=text],input[type=email],input[type=password],input[type=number],input[type=date],input[type=search],textarea{background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:8px 11px;min-height:38px;outline:none}
 select:focus,input:focus,textarea:focus{border-color:var(--accent)}
 .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
 .seg button{background:none;border:0;padding:6px 12px;border-radius:7px;cursor:pointer;color:var(--text-secondary);font-weight:500;font-size:13.5px}
 .seg button.on{background:var(--surface-1);color:var(--text-primary);box-shadow:0 1px 2px rgba(0,0,0,.25)}
-.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:9px;padding:9px 16px;font-weight:600;cursor:pointer}
+.btn{background:var(--accent-strong,var(--accent));color:var(--accent-ink);border:0;border-radius:9px;padding:9px 16px;font-weight:600;cursor:pointer}
 .btn:disabled{opacity:.5;cursor:default}
 .btn.sec{background:var(--surface-2);color:var(--text-primary);border:1px solid var(--border)}
 .btn.danger{background:var(--danger)}
-.fab{position:fixed;right:24px;bottom:24px;width:58px;height:58px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:30px;line-height:1;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.35);z-index:20}
+.fab{position:fixed;right:24px;bottom:24px;width:58px;height:58px;border-radius:50%;border:0;background:var(--accent-strong,var(--accent));color:#fff;font-size:30px;line-height:1;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.35);z-index:20}
 .tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--surface-3);color:var(--text-secondary)}
 .muted{color:var(--text-muted)}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -205,21 +208,23 @@ nav.bottom{display:none}
 </div>
 <nav class="bottom" id="bottomnav"></nav>
 <button class="fab" id="fab" title="Add a log" aria-label="Add a log" style="display:none">+</button>
-<div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
+<div class="scrim" id="scrim"><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
 <div id="tip"></div>
-<div id="toast"></div>
-<script src="sound.js?v=202611222210"></script>
-<script src="scenes.js?v=202611222210"></script>
-<script src="backdrops.js?v=202611222210"></script>
-<script src="paintings.js?v=202611222210"></script>
-<script src="clocks.js?v=202611222210"></script>
-<script src="fx.js?v=202611222210"></script>
-<script src="points.js?v=202611222210"></script>
-<script src="focus.js?v=202611222210"></script>
-<script src="goals.js?v=202611222210"></script>
-<script src="insights.js?v=202611222210"></script>
-<script src="social.js?v=202611222210"></script>
-<script src="backup.js?v=202611222210"></script>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="sound.js?v=202611230330"></script>
+<script src="scenes.js?v=202611230330"></script>
+<script src="backdrops.js?v=202611230330"></script>
+<script src="paintings.js?v=202611230330"></script>
+<script src="clocks.js?v=202611230330"></script>
+<script src="fx.js?v=202611230330"></script>
+<script src="points.js?v=202611230330"></script>
+<script src="focus.js?v=202611230330"></script>
+<script src="goals.js?v=202611230330"></script>
+<script src="insights.js?v=202611230330"></script>
+<script src="social.js?v=202611230330"></script>
+<script src="sync.js?v=202611230330"></script>
+<script src="keys.js?v=202611230330"></script>
+<script src="backup.js?v=202611230330"></script>
 <script>
 "use strict";
 /* ============ CONFIG ============ */
@@ -238,6 +243,7 @@ const ICONS={
  focus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21c4.4 0 8-3.4 8-7.6C20 8.8 16.4 6 12 6s-8 2.8-8 7.4C4 17.6 7.6 21 12 21z"/><path d="M12 6c0-1.6.8-3 2.4-3.6M9.5 4.5C10.6 5 11.4 5.6 12 6"/></svg>',
  insights:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>',
  friends:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.7c.5-.1 1-.2 1.5-.2 2.5 0 4.5 1.7 4.5 4.5"/></svg>',
+ again:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 9"/><path d="M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-13.7 5.6L4 15"/><path d="M4 20v-5h5"/></svg>',
  manage:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>',
  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
  del:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>'
@@ -281,7 +287,7 @@ const readOnly=()=>viewing!==me;
 const settings=()=>viewProfile||{subjects:[],types:[]};
 function toast(msg,ms=2800){const t=$("#toast");t.textContent=msg;t.style.display="block";clearTimeout(toast._t);toast._t=setTimeout(()=>t.style.display="none",ms)}
 function fail(e,msg){console.error(e);toast(msg||(e&&e.message)||"Something went wrong")}
-const fromRow=r=>({i:r.id,a:r.activity||"",s:r.subject,t:r.type,m:r.minutes,d:r.d,src:r.src,c:r.created_at||""});
+const fromRow=r=>({i:r.id,a:r.activity||"",s:r.subject,t:r.type,m:r.minutes,d:r.d,src:r.src,c:r.created_at||"",x:r.ext_id||null});
 
 function all(){
   if(cache)return cache;
@@ -314,11 +320,12 @@ function streak(){return streakInfo().cur}
 async function loadLogs(){
   const uid=viewing;const out=[];
   for(let from=0;;from+=1000){
-    const {data,error}=await sb.from("logs").select("id,d,subject,type,minutes,activity,src,created_at").eq("user_id",uid).order("d",{ascending:false}).order("created_at",{ascending:false}).range(from,from+999);
+    const {data,error}=await sb.from("logs").select("id,d,subject,type,minutes,activity,src,created_at,ext_id").eq("user_id",uid).order("d",{ascending:false}).order("created_at",{ascending:false}).range(from,from+999);
     if(error)throw error;out.push(...data.map(fromRow));if(data.length<1000)break;
   }
   if(uid!==viewing)return;
-  logsArr=out;invalidate();
+  if(uid===me)Net.apply(out);
+  logsArr=out;invalidate();if(uid===me)Cache.save();
 }
 async function loadProfile(id){const {data,error}=await sb.from("profiles").select("*").eq("id",id).maybeSingle();if(error)throw error;return data}
 async function loadShares(){
@@ -331,26 +338,30 @@ async function loadShares(){
 async function loadTokens(){const {data,error}=await sb.from("ingest_tokens").select("token,name,created_at").order("created_at");if(!error)tokens=data}
 async function loadTimer(){if(readOnly())return;const {data,error}=await sb.from("timers").select("data").eq("user_id",me).maybeSingle();if(!error){timer=data?data.data:null;renderBanner()}}
 
+// Changes show at once and go through the offline outbox (sync.js), so they're never lost.
 async function saveLog(e,old){
   if(readOnly())return;
-  const row={d:e.d,subject:e.s,type:e.t,minutes:e.m,activity:e.a||"",src:e.src||"manual"};
-  if(old){const i=logsArr.findIndex(x=>x.i===old.i);if(i>=0)logsArr[i]={...old,...e};invalidate();render();
-    const {error}=await sb.from("logs").update(row).eq("id",old.i);if(error){fail(error,"Couldn't save the change");await refresh()}}
-  else{const tmp={...e,i:"tmp"+Math.random(),c:new Date().toISOString()};logsArr.push(tmp);invalidate();render();
-    const {data,error}=await sb.from("logs").insert(row).select("id,created_at").single();
-    if(error){logsArr=logsArr.filter(x=>x!==tmp);invalidate();render();return fail(error,"Couldn't save the log")}
-    tmp.i=data.id;tmp.c=data.created_at;return tmp;}
+  if(old){const nl={...old,...e};const i=logsArr.findIndex(x=>x.i===old.i);if(i>=0)logsArr[i]=nl;invalidate();render();
+    Net.write({op:"update",ids:[old.i],patch:{d:nl.d,subject:nl.s,type:nl.t,minutes:nl.m,activity:nl.a||"",src:nl.src||"manual"}});return nl}
+  const l={a:"",...e,i:newId(),c:new Date().toISOString(),x:null};logsArr.push(l);invalidate();render();
+  Net.write({op:"insert",rows:[toRow(l)]});return l;
 }
-async function deleteLog(l,withUndo){
-  logsArr=logsArr.filter(x=>x.i!==l.i);invalidate();render();
-  // ask the database for the deleted row back, so Undo can restore it exactly (same id, time and tracker link)
-  const p=Promise.resolve(sb.from("logs").delete().eq("id",l.i).select());   // run the request once and share the result
-  if(withUndo)actionToast(`Log deleted · ${dur(l.m)} of ${l.s}`,"Undo",async()=>{
-    const {data,error}=await p;if(error)return;const row=data&&data[0];
-    logsArr.push(l);invalidate();render();
-    const r=await sb.from("logs").insert(row||{d:l.d,subject:l.s,type:l.t,minutes:l.m,activity:l.a||"",src:l.src||"manual",created_at:l.c});
-    if(r.error){logsArr=logsArr.filter(x=>x!==l);invalidate();render();fail(r.error,"Couldn't restore the log")}else toast("Log restored")},8000);
-  const {error}=await p;if(error){fail(error,"Couldn't delete");await refresh()}
+function deleteLogs(list,withUndo,label){
+  if(readOnly()||!list.length)return;const ids=new Set(list.map(l=>l.i));
+  logsArr=logsArr.filter(x=>!ids.has(x.i));invalidate();render();
+  Net.write({op:"delete",ids:[...ids]});
+  if(withUndo)actionToast(label||(list.length===1?`Log deleted · ${dur(list[0].m)} of ${list[0].s}`:`${list.length} logs deleted`),"Undo",()=>{
+    logsArr.push(...list);invalidate();render();Net.write({op:"insert",rows:list.map(toRow)});toast(list.length===1?"Log restored":`${list.length} logs restored`)},8000);
+}
+async function deleteLog(l,withUndo){deleteLogs([l],withUndo)}
+// change several logs at once; Undo puts every log back the way it was
+function updateLogs(list,patch,label){
+  if(readOnly()||!list.length)return;const before=list.map(l=>({...l}));
+  for(const l of list){const x=logsArr.find(y=>y.i===l.i);if(x)patchLocal(x,patch)}invalidate();render();
+  Net.write({op:"update",ids:list.map(l=>l.i),patch});
+  actionToast(label,"Undo",()=>{const groups={};for(const b of before){const p={d:b.d,subject:b.s,type:b.t,minutes:b.m,activity:b.a||"",src:b.src||"manual"};const k=JSON.stringify(p);(groups[k]=groups[k]||{p,ids:[]}).ids.push(b.i);
+      const x=logsArr.find(y=>y.i===b.i);if(x)Object.assign(x,b)}
+    invalidate();render();for(const g of Object.values(groups))Net.write({op:"update",ids:g.ids,patch:g.p});toast("Undone")},8000);
 }
 async function saveSettings(patch){
   if(readOnly())return;
@@ -481,17 +492,24 @@ function viewStats(){
 }
 function afterStats(){const el=$("#bars");if(el)barChart(el,rangeData(ui.statSubj,ui.range))}
 
-function logRow(l){const auto=!MANUAL_SRC.includes(l.src);const ro=readOnly();
-  return `<div class="log"><div class="main"><div class="act ${l.a?"":"empty"}">${l.a?esc(l.a):"No description"}${auto?`<span class="auto">${esc(l.src)}</span>`:""}</div><div class="meta">${esc(l.s)} · ${esc(l.t)}</div></div><div class="min num">${l.m} min</div>${ro?"":`<button class="ib" data-edit="${l.i}" title="Edit">${ICONS.edit}</button><button class="ib" data-del="${l.i}" title="Delete">${ICONS.del}</button>`}</div>`}
+function logRow(l){const auto=!MANUAL_SRC.includes(l.src);const ro=readOnly();const sel=ui.sel;
+  if(sel)return `<label class="log selrow ${sel.has(l.i)?"on":""}"><input type="checkbox" data-selid="${l.i}" ${sel.has(l.i)?"checked":""} aria-label="Select this log"><div class="main"><div class="act ${l.a?"":"empty"}">${l.a?esc(l.a):"No description"}${auto?`<span class="auto">${esc(l.src)}</span>`:""}</div><div class="meta">${esc(l.s)} · ${esc(l.t)}</div></div><div class="min num">${l.m} min</div></label>`;
+  return `<div class="log"><div class="main"><div class="act ${l.a?"":"empty"}">${l.a?esc(l.a):"No description"}${auto?`<span class="auto">${esc(l.src)}</span>`:""}</div><div class="meta">${esc(l.s)} · ${esc(l.t)}</div></div><div class="min num">${l.m} min</div>${ro?"":`<button class="ib" data-again="${l.i}" title="Log again today">${ICONS.again}</button><button class="ib" data-edit="${l.i}" title="Edit">${ICONS.edit}</button><button class="ib" data-del="${l.i}" title="Delete">${ICONS.del}</button>`}</div>`}
 function viewLogs(){
   const q=ui.logQ.toLowerCase();const list=all().logs.filter(l=>(ui.logSubj==="All"||l.s===ui.logSubj)&&(ui.logType==="All"||l.t===ui.logType)&&(!q||(l.a||"").toLowerCase().includes(q)));
   const shown=list.slice(0,ui.logLimit);let html="",cur=null,dayTot={};for(const l of list)dayTot[l.d]=(dayTot[l.d]||0)+l.m;
   for(const l of shown){if(l.d!==cur){if(cur)html+="</div>";cur=l.d;html+=`<div class="day"><h3><span>${fmtDate(l.d)}</span><span class="num">${dur(dayTot[l.d])}</span></h3>`}html+=logRow(l)}
   if(cur)html+="</div>";
-  return roNote()+`<h1>Logs</h1><p class="sub">${list.length} sessions · <span class="num">${H(list.reduce((a,l)=>a+l.m,0))}</span> h</p>
+  ui._shown=list;const sel=ui.sel;const ro=readOnly();
+  return roNote()+`<div class="row" style="align-items:flex-start"><div style="flex:1"><h1>Logs</h1><p class="sub">${list.length} sessions · <span class="num">${H(list.reduce((a,l)=>a+l.m,0))}</span> h</p></div>${ro?"":`<button class="btn sec" data-act="selMode">${sel?"Done":"Select"}</button>`}</div>
+  ${sel?`<div class="selbar" role="toolbar" aria-label="Selected logs"><b class="num">${sel.size}</b> selected <button class="linkb" data-act="selAll">Select all ${list.length}</button>${sel.size?`<button class="linkb" data-act="selNone">Clear</button>`:""}<span class="spacer"></span>
+    <select id="selSubj" ${sel.size?"":"disabled"}><option value="">Change subject…</option>${[...subjects(),...LANGS.filter(x=>!subjects().includes(x))].map(x=>`<option>${esc(x)}</option>`).join("")}<option value="__other">Other…</option></select>
+    <select id="selType" ${sel.size?"":"disabled"}><option value="">Change type…</option>${types().map(x=>`<option>${esc(x)}</option>`).join("")}</select>
+    <input type="date" id="selDate" title="Move to date" aria-label="Move selected logs to a date" max="${today()}" ${sel.size?"":"disabled"}>
+    <button class="btn danger sm" data-act="selDel" ${sel.size?"":"disabled"}>Delete</button></div>`:""}
   <div class="row"><input type="search" id="logQ" placeholder="Search activity…" value="${esc(ui.logQ)}" style="flex:1;min-width:180px"><select id="logSubj">${subjOptions(ui.logSubj,true)}</select><select id="logType"><option value="All">All types</option>${types().map(t=>`<option ${t===ui.logType?"selected":""}>${esc(t)}</option>`).join("")}</select></div>
   <div>${html||'<div class="empty-state">No logs match.</div>'}</div>
-  ${list.length>ui.logLimit?`<div style="text-align:center;margin-top:16px"><button class="btn sec" data-act="more">Show more (${list.length-ui.logLimit} left)</button></div>`:""}`;
+  ${list.length>ui.logLimit?`<div style="text-align:center;margin-top:16px" id="moreLogs"><button class="btn sec" data-act="more">Show more (${list.length-ui.logLimit} left)</button></div>`:""}`;
 }
 
 let importState=null;
@@ -499,7 +517,7 @@ function viewManage(){
   if(readOnly())return roNote()+`<h1>Setup</h1><div class="card empty-state"><p>Switch back to your own logbook to change settings.</p><button class="btn" data-act="viewMe">Back to my logbook</button></div>`;
   const subs=subjects();const pinned=settings().subjects||[];const c=all();
   return `<h1>Setup</h1><p class="sub">Subjects, sharing, connections, import and export.</p>
-  <div class="card"><h2>Appearance</h2><p class="sub">Theme for this device.</p><div class="themes">${THEMES.map(([k,n])=>`<button class="tsw ${k===curTheme()?"on":""}" data-act="setTheme" data-theme="${k}"><span class="tsw-prev" data-prev="${k}"><i></i><i></i><i></i></span>${n}</button>`).join("")}</div></div>
+  <div class="card"><h2>Appearance</h2><p class="sub">Theme for this device.</p><div class="row" style="margin:0 0 12px;gap:10px;flex-wrap:wrap"><span class="muted" style="font-size:13.5px">Motion</span><div class="seg sm">${[["auto","Follow device"],["reduce","Reduced"],["full","Full"]].map(([k,l])=>`<button class="${motionPref()===k?"on":""}" data-act="motion" data-v="${k}">${l}</button>`).join("")}</div></div><div class="themes">${THEMES.map(([k,n])=>`<button class="tsw ${k===curTheme()?"on":""}" data-act="setTheme" data-theme="${k}"><span class="tsw-prev" data-prev="${k}"><i></i><i></i><i></i></span>${n}</button>`).join("")}</div></div>
   ${consistencyCard()}
   <div class="card"><h2>Quick logs</h2><p class="sub">Your one-tap buttons on Home (${Quick.list().length}). Recent activities are suggested when you create one.</p><button class="btn sec" data-g="quick">Manage quick logs</button></div>
   ${Social.privacyCard()}
@@ -525,7 +543,11 @@ function viewManage(){
   <div class="card"><h2>Import from Polylogger</h2><p class="sub">Pick your exported CSV. Rows already in your logbook are skipped, so importing again is safe.</p>
    <input type="file" id="csvFile" accept=".csv,text/csv"><div id="importBox"></div></div>
   ${Backup.card()}
-  <div class="card"><h2>Account</h2><p class="sub">Signed in as <b>@${esc(myProfile.username)}</b>.</p><button class="btn sec" data-act="logout">Log out</button></div>`;
+  <div class="card" id="accountCard"><h2>Account</h2><p class="sub">Signed in as <b>@${esc(myProfile.username)}</b>${ui.email?` · ${esc(ui.email)}`:""}.</p>
+   <div class="acc"><label for="acUser">Username</label><div class="row"><input type="text" id="acUser" value="${esc(myProfile.username)}" autocapitalize="none" pattern="[a-z0-9_]{3,20}"><button class="btn sec" data-act="saveUser">Change</button></div>
+    <label for="acEmail">Email</label><div class="row"><input type="email" id="acEmail" placeholder="${esc(ui.email||"New email")}" autocomplete="email"><button class="btn sec" data-act="saveEmail">Change</button></div>
+    <label for="acPw">New password</label><div class="row"><input type="password" id="acPw" placeholder="At least 8 characters" autocomplete="new-password"><input type="password" id="acPw2" placeholder="Repeat it" autocomplete="new-password" aria-label="Repeat the new password"><button class="btn sec" data-act="savePw">Change</button></div></div>
+   <div class="row" style="margin-top:16px"><button class="btn sec" data-act="logout">Log out</button><span class="spacer"></span><button class="linkb" data-act="delAccount" style="color:var(--danger)">Delete account…</button></div><div id="delBox"></div></div>`;
 }
 function renderImportBox(){
   const box=$((importState&&importState.box)||"#importBox");if(!box||!importState)return;const st=importState;
@@ -578,7 +600,8 @@ function viewAuth(){
 /* ============ add / edit modal ============ */
 let modalState=null;
 function openModal(entry){
-  if(readOnly())return;const t=timer;const def=entry||{a:"",s:focus(),t:"Listening",m:30,d:today()};
+  if(readOnly())return;const t=timer;let last={};try{last=JSON.parse(localStorage.getItem("lb-last")||"{}")}catch(_){}
+  const def=entry||{a:"",s:last.s||focus(),t:last.t||"Listening",m:last.m||30,d:today()};
   modalState={entry,mode:entry?"manual":(t?t.mode:"manual"),timerMin:25};
   const subs=subjects();const list=[...subs,...LANGS.filter(l=>!subs.includes(l))];const cur=t&&!entry?t:{a:def.a,s:def.s,t:def.t};
   $("#modal").innerHTML=`<div class="row" style="margin-bottom:4px"><h2 style="font-size:19px">${entry?"Edit log":"Add a log"}</h2><span class="spacer"></span><button class="ib" data-act="close" aria-label="Close" style="font-size:20px">×</button></div>
@@ -595,7 +618,9 @@ function openModal(entry){
 function renderModeBody(def){
   const m=modalState.mode;document.querySelectorAll("#modeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.mode===m));
   const b=$("#modeBody");const t=timer;
-  if(m==="manual"){b.innerHTML=`<div class="two"><div class="field"><label>Date</label><input type="date" id="fD" value="${def?def.d:today()}" max="${today()}"></div><div class="field"><label>Minutes</label><input type="number" id="fM" min="1" max="1440" value="${def?def.m:30}" inputmode="numeric"></div></div>
+  if(m==="manual"){const dv=def?def.d:today();const qd=[[0,"Today"],[1,"Yesterday"],[2,"2 days ago"]];
+   b.innerHTML=`<div class="dchips">${qd.map(([n,l])=>{const v=ymd(addDays(new Date(),-n));return `<button type="button" class="qchip tpl ${v===dv?"on":""}" data-qdate="${v}">${l}</button>`}).join("")}</div>
+   <div class="two"><div class="field"><label>Date</label><input type="date" id="fD" value="${dv}" max="${today()}"></div><div class="field"><label>Minutes</label><input type="number" id="fM" min="1" max="1440" value="${def?def.m:30}" inputmode="numeric"></div></div>
    <div class="row" style="justify-content:flex-end;margin-top:6px"><button class="btn sec" data-act="close">Cancel</button><button class="btn" data-act="saveManual">Save log</button></div>`}
   else if(!t||t.mode!==m){b.innerHTML=(m==="timer"?`<div class="field"><label>Duration (minutes)</label><input type="number" id="fTm" min="1" value="${modalState.timerMin}"></div>`:`<p class="muted" style="margin:4px 0 12px">Runs on all your devices — start on your phone, stop on your computer.</p>`)+
    (t?`<p class="muted">A ${t.mode} is already running — stop it first.</p>`:`<div class="row" style="justify-content:flex-end"><button class="btn" data-act="startClock">Start ${m}</button></div>`)}
@@ -630,13 +655,15 @@ function stopSave(){
 
 /* ============ events ============ */
 document.addEventListener("click",async e=>{
-  const a=e.target.closest("[data-act],[data-edit],[data-del],[data-mode],[data-r],[data-unpin],[data-untype],[data-unshare],[data-copytok],[data-deltok]");if(!a)return;
+  const a=e.target.closest("[data-act],[data-edit],[data-del],[data-again],[data-qdate],[data-mode],[data-r],[data-unpin],[data-untype],[data-unshare],[data-copytok],[data-deltok]");if(!a)return;
+  if(a.dataset.again){const l=all().logs.find(x=>x.i===a.dataset.again);if(!l)return;const n=await saveLog({a:l.a,s:l.s,t:l.t,m:l.m,d:today(),src:"manual"});actionToast(`Logged ${l.m} min of ${l.s} again today`,"Undo",()=>deleteLog(n),6000);return}
+  if(a.dataset.qdate){const f=$("#fD");if(f)f.value=a.dataset.qdate;document.querySelectorAll("[data-qdate]").forEach(b=>b.classList.toggle("on",b===a));return}
   if(a.dataset.edit){const l=all().logs.find(x=>x.i===a.dataset.edit);if(l)openModal(l);return}
   if(a.dataset.del){if(a.classList.contains("confirm")){const l=all().logs.find(x=>x.i===a.dataset.del);if(l)deleteLog(l,true);return}a.classList.add("confirm");a.textContent="Delete?";setTimeout(()=>{if(a.isConnected){a.classList.remove("confirm");a.innerHTML=ICONS.del}},3000);return}
   if(a.dataset.mode&&modalState){modalState.mode=a.dataset.mode;renderModeBody(null);return}
   if(a.dataset.r){ui.range=a.dataset.r;render();return}
-  if(a.dataset.unpin){saveSettings({subjects:(settings().subjects||[]).filter(s=>s!==a.dataset.unpin)});return}
-  if(a.dataset.untype){saveSettings({types:(settings().types||[]).filter(s=>s!==a.dataset.untype)});return}
+  if(a.dataset.unpin){const prev=settings().subjects||[];saveSettings({subjects:prev.filter(s=>s!==a.dataset.unpin)});actionToast(`Removed ${a.dataset.unpin}`,"Undo",()=>saveSettings({subjects:prev}));return}
+  if(a.dataset.untype){const prev=settings().types||[];saveSettings({types:prev.filter(s=>s!==a.dataset.untype)});actionToast(`Removed ${a.dataset.untype}`,"Undo",()=>saveSettings({types:prev}));return}
   if(a.dataset.unshare){const {error}=await sb.from("shares").delete().eq("owner",me).eq("viewer",a.dataset.unshare);if(error)return fail(error);await loadShares();render();toast("Stopped sharing");return}
   if(a.dataset.copytok){navigator.clipboard.writeText(a.dataset.copytok).then(()=>toast("Token copied")).catch(()=>toast("Couldn't copy"));return}
   if(a.dataset.deltok){if(!a.classList.contains("confirm")){a.classList.add("confirm");a.textContent="Delete?";return}const {error}=await sb.from("ingest_tokens").delete().eq("token",a.dataset.deltok);if(error)return fail(error);await loadTokens();render();toast("Connection removed");return}
@@ -645,7 +672,9 @@ document.addEventListener("click",async e=>{
   else if(act==="theme"){const i=THEMES.findIndex(t=>t[0]===curTheme());const nx=THEMES[(i+1)%THEMES.length];setTheme(nx[0]);toast("Theme: "+nx[1])}
   else if(act==="setTheme"){setTheme(a.dataset.theme)}
   else if(act==="saveManual"){const f=readForm();if(!f)return;const m=parseInt($("#fM").value,10),d=$("#fD").value;if(!(m>0&&m<=1440)||!/^\d{4}-\d{2}-\d{2}$/.test(d))return toast("Check date and minutes (1–1440)");
-    const old=modalState.entry;const en={...f,m,d,src:old?old.src:"manual"};closeModal();await saveLog(en,old);toast(old?"Log updated":`Logged ${m} min of ${en.s}`)}
+    const old=modalState.entry;const en={...f,m,d,src:old?old.src:"manual"};closeModal();
+    if(old){const prev={...old};const nl=await saveLog(en,old);actionToast("Log updated","Undo",()=>{saveLog(prev,nl);toast("Change undone")},8000)}
+    else{try{localStorage.setItem("lb-last",JSON.stringify({s:en.s,t:en.t,m}))}catch(_){}const l=await saveLog(en);actionToast(`Logged ${m} min of ${en.s}`,"Undo",()=>deleteLog(l),6000)}}
   else if(act==="startClock"){const f=readForm();if(!f)return;let du=0;if(modalState.mode==="timer"){const mm=parseInt($("#fTm").value,10);if(!(mm>0))return toast("Set a duration");du=mm*60000;modalState.timerMin=mm}
     try{actx=actx||new (window.AudioContext||window.webkitAudioContext)()}catch(_){}beeped=false;
     const mode=modalState.mode;await saveTimer({mode,...f,start:Date.now(),start0:Date.now(),acc:0,running:true,dur:du});if(modalState)renderModeBody(null)}
@@ -654,6 +683,23 @@ document.addEventListener("click",async e=>{
   else if(act==="stopSave")stopSave();
   else if(act==="discard"){saveTimer(null);closeModal();toast("Discarded")}
   else if(act==="more"){ui.logLimit+=300;render()}
+  else if(act==="selMode"){ui.sel=ui.sel?null:new Set();render()}
+  else if(act==="selAll"){ui.sel=new Set((ui._shown||[]).map(l=>l.i));render()}
+  else if(act==="selNone"){ui.sel=new Set();render()}
+  else if(act==="selDel"){if(!ui.sel||!ui.sel.size)return;if(!a.classList.contains("confirm")){a.classList.add("confirm");a.textContent=`Delete ${ui.sel.size}?`;return}
+    const list=all().logs.filter(l=>ui.sel.has(l.i));ui.sel=new Set();deleteLogs(list,true)}
+  else if(act==="saveUser"){const u=$("#acUser").value.trim().toLowerCase().replace(/^@/,"");if(!/^[a-z0-9_]{3,20}$/.test(u))return toast("3–20 lowercase letters, numbers or _");if(u===myProfile.username)return;
+    const {error}=await sb.from("profiles").update({username:u}).eq("id",me);if(error)return toast(error.code==="23505"?"That username is taken":error.message);myProfile={...myProfile,username:u};viewProfile=myProfile;render();toast("Username changed to @"+u)}
+  else if(act==="saveEmail"){const em=$("#acEmail").value.trim();if(!/^\S+@\S+\.\S+$/.test(em))return toast("Check the email address");
+    const {error}=await sb.auth.updateUser({email:em},{emailRedirectTo:location.origin+location.pathname});if(error)return toast(error.message);toast("Check both inboxes — confirm the change from the email link",7000)}
+  else if(act==="savePw"){const p1=$("#acPw").value,p2=$("#acPw2").value;if(p1.length<8)return toast("At least 8 characters");if(p1!==p2)return toast("The passwords don't match");
+    const {error}=await sb.auth.updateUser({password:p1});if(error)return toast(error.message);$("#acPw").value="";$("#acPw2").value="";toast("Password changed")}
+  else if(act==="delAccount"){const box=$("#delBox");box.innerHTML=`<p class="sub" style="color:var(--danger);margin:10px 0 8px">This deletes your account, all your logs, goals, Focus history, friends and connections. It can't be undone. Download a full backup first if you might want your data.</p>
+    <div class="row"><input type="text" id="delConfirm" placeholder="Type your username to confirm" autocapitalize="none" style="flex:1"><button class="btn danger" data-act="delAccount2">Delete forever</button></div>`}
+  else if(act==="delAccount2"){if(($("#delConfirm").value||"").trim().toLowerCase()!==myProfile.username)return toast("Type @"+myProfile.username+" without the @ to confirm");
+    const {error}=await sb.rpc("delete_my_account");if(error)return toast(/function|schema cache/i.test(error.message)?"Run supabase-update-3.sql in Supabase first":"Couldn't delete: "+error.message,7000);
+    const uid=me;Cache.clear(uid);["lb-prefs","lb-timeline","lb-points","lb-focus","lb-focus-at","lb-focus-synced","lb-room","lb-last"].forEach(k=>{try{localStorage.removeItem(k)}catch(_){}});await sb.auth.signOut();toast("Your account was deleted",6000)}
+  else if(act==="motion"){setMotion(a.dataset.v);render()}
   else if(act==="saveFocus"){saveSettings({focus:$("#focusSel").value});ui.statSubj=null;toast("Focus saved")}
   else if(act==="addSubj"){const v=($("#addOther").value.trim()||$("#addLang").value).slice(0,60);if(!v)return;if(!(settings().subjects||[]).includes(v))saveSettings({subjects:[...(settings().subjects||[]),v]});toast("Added "+v)}
   else if(act==="addType"){const v=$("#newType").value.trim().slice(0,40);if(!v||types().includes(v))return;saveSettings({types:[...(settings().types||[]),v]})}
@@ -681,7 +727,7 @@ document.addEventListener("submit",async e=>{
 });
 $("#fab").addEventListener("click",()=>openModal(null));
 $("#scrim").addEventListener("click",e=>{if(e.target.id==="scrim")closeModal()});
-document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#scrim").classList.contains("open"))closeModal()});
 document.addEventListener("change",e=>{
   const id=e.target.id;
   if(id==="hmSubj"){ui.hmSubj=e.target.value;afterHome()}
@@ -690,6 +736,11 @@ document.addEventListener("change",e=>{
   else if(id==="logSubj"){ui.logSubj=e.target.value;ui.logLimit=150;render()}
   else if(id==="logType"){ui.logType=e.target.value;ui.logLimit=150;render()}
   else if(id==="viewSel"||id==="viewSelM")switchView(e.target.value);
+  else if(id==="selSubj"||id==="selType"||id==="selDate"){const v=e.target.value;if(!v||!ui.sel||!ui.sel.size)return;let val=v;
+    if(v==="__other"){val=(prompt("New subject name")||"").trim().slice(0,60);if(!val){e.target.value="";return}}
+    const list=all().logs.filter(l=>ui.sel.has(l.i));const col=id==="selSubj"?"subject":id==="selType"?"type":"d";
+    updateLogs(list,{[col]:val},`${list.length} log${list.length>1?"s":""} → ${id==="selDate"?fmtDate(val):val}`)}
+  else if(e.target.dataset&&e.target.dataset.selid){const k=e.target.dataset.selid;if(e.target.checked)ui.sel.add(k);else ui.sel.delete(k);render()}
   else if(id==="csvFile"&&e.target.files[0]){const f=e.target.files[0];e.target.value="";handleCSV(f)}
 });
 let qT;document.addEventListener("input",e=>{if(e.target.id==="logQ"){ui.logQ=e.target.value;clearTimeout(qT);qT=setTimeout(()=>{render();const i=$("#logQ");if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}},250)}});
@@ -706,28 +757,47 @@ async function switchView(id){
   $("#view").innerHTML='<div class="empty-state">Loading…</div>';renderNav();renderBanner();
   try{await loadLogs()}catch(e){fail(e,"Couldn't load that logbook")}render();
 }
+function skeleton(){return `<div class="skel" aria-busy="true" aria-label="Loading"><i style="width:30%;height:28px"></i><i style="width:45%"></i><div class="skel-row"><i></i><i></i><i></i><i></i></div><i style="height:150px"></i><i style="height:220px"></i></div>`}
 async function startApp(){
-  myProfile=await loadProfile(me);viewing=me;viewProfile=myProfile;phase="app";
-  $("#view").innerHTML='<div class="empty-state">Loading your logbook…</div>';
-  await Promise.all([loadLogs().catch(e=>fail(e,"Couldn't load your logs")),loadShares().catch(console.error),loadTokens(),loadTimer()]);
-  render();Social.start();
+  const c=Cache.load(me);Net.init();
+  if(!Net.bootOffline){const p=await loadProfile(me).catch(e=>{if(c&&c.profile){Net.markOffline();return c.profile}throw e});myProfile=p||(c&&c.profile)}
+  else myProfile=c&&c.profile;
+  if(!myProfile){phase="auth";authMsg="You're offline and this device has no saved copy yet.";return render()}
+  viewing=me;viewProfile=myProfile;phase="app";
+  if(c&&c.logs){logsArr=Net.apply(c.logs);invalidate();render()}else $("#view").innerHTML=skeleton();
+  if(Net.bootOffline){render();launchAction();return}
+  sb.auth.getUser().then(r=>{if(r.data&&r.data.user){ui.email=r.data.user.email;if(route()==="manage")render()}}).catch(()=>{});
+  await Promise.all([loadLogs().catch(e=>{if(c)Net.markOffline();else fail(e,"Couldn't load your logs")}),loadShares().catch(console.error),loadTokens().catch(()=>{}),loadTimer().catch(()=>{})]);
+  render();Social.start();FocusSync.start();Net.flush();launchAction();
 }
 async function afterLogin(){
-  const p=await loadProfile(me).catch(e=>{fail(e);return null});
+  const p=await loadProfile(me).catch(e=>{const c=Cache.load(me);if(c&&c.profile)return c.profile;fail(e);return null});
   if(!p||!p.username){phase="username";authMsg="";return render()}
   await startApp();
 }
 function render(){
   renderNav();const v=$("#view");
-  if(phase==="boot"){v.innerHTML='<div class="empty-state">Loading…</div>';return}
+  if(phase==="boot"){v.innerHTML=skeleton();return}
   if(phase!=="app"){document.body.classList.remove("immersive");v.innerHTML=viewAuth();renderBanner();return}
   const r=route();
   if(r==="focus"&&typeof Focus!=="undefined"){document.body.classList.add("immersive");Focus.render(v);return}
   document.body.classList.remove("immersive");if(typeof Focus!=="undefined"){Focus.unmount();Focus.paint(false)}
   if(r==="manage"&&$((importState&&importState.box)||"#importBox")&&importState&&!importState.done){renderImportBox();return}
+  if(r!=="logs"&&ui.sel)ui.sel=null;
   v.innerHTML=r==="stats"?viewStats():r==="logs"?viewLogs():r==="manage"?viewManage():r==="insights"?Insights.view():r==="friends"?Social.view():viewHome();
   if(r==="home")afterHome();if(r==="stats")afterStats();if(r==="manage")renderImportBox();if(r==="insights")Insights.after();
+  if(r==="logs")watchMore();
+  v.querySelectorAll("button[title]:not([aria-label])").forEach(b=>b.setAttribute("aria-label",b.title));Net.paint();
 }
+// Logs: load the next page automatically when you scroll near the end
+let moreObs=null;
+function watchMore(){if(moreObs)moreObs.disconnect();const m=$("#moreLogs");if(!m||!("IntersectionObserver" in window))return;
+  moreObs=new IntersectionObserver(es=>{if(es.some(x=>x.isIntersecting)){moreObs.disconnect();ui.logLimit+=300;const y=scrollY;render();scrollTo(0,y)}},{rootMargin:"600px"});moreObs.observe(m)}
+// Motion: follow the device setting, or force reduced/full motion (paintings, candle, rain, transitions)
+function motionPref(){try{return localStorage.getItem("lb-motion")||"auto"}catch(_){return "auto"}}
+function reduceMotion(){const p=motionPref();return p==="reduce"||(p==="auto"&&matchMedia("(prefers-reduced-motion: reduce)").matches)}
+function setMotion(v){try{localStorage.setItem("lb-motion",v)}catch(_){}document.documentElement.dataset.motion=reduceMotion()?"reduce":"full";if(typeof Scenes!=="undefined")Scenes._reduce=reduceMotion()}
+setMotion(motionPref());
 setTheme(curTheme(),true);
 (async()=>{
   render();
@@ -737,13 +807,17 @@ setTheme(curTheme(),true);
   sb.auth.onAuthStateChange((event,session)=>{
     setTimeout(async()=>{
       if(event==="PASSWORD_RECOVERY"){recovering=true;me=session.user.id;phase="recovery";authMsg="";return render()}
-      if(event==="SIGNED_OUT"){Social.stop();me=null;myProfile=null;viewing=null;logsArr=[];timer=null;invalidate();phase="auth";authMsg="";return render()}
+      if(event==="SIGNED_OUT"){Social.stop();ui.sel=null;me=null;myProfile=null;viewing=null;logsArr=[];timer=null;invalidate();phase="auth";authMsg="";return render()}
+      if((event==="SIGNED_IN"||event==="TOKEN_REFRESHED")&&session&&Net.bootOffline){Net.setBootOffline(false);me=session.user.id;return startApp()}
       if(event==="SIGNED_IN"&&session&&!recovering&&me!==session.user.id){me=session.user.id;await afterLogin()}
     },0);
   });
-  const {data:{session}}=await sb.auth.getSession();
+  // offline (or a very slow network): open from this device's saved copy instead of waiting
+  const sid=storedUserId();
+  const got=await Promise.race([sb.auth.getSession().then(r=>r.data.session).catch(()=>null),new Promise(r=>setTimeout(()=>r("slow"),navigator.onLine?8000:1500))]);
   if(recovering)return;
-  if(session){if(me!==session.user.id){me=session.user.id;await afterLogin()}}
+  if(got&&got!=="slow"){if(me!==got.user.id){me=got.user.id;await afterLogin()}}
+  else if(sid&&Cache.load(sid)&&(got==="slow"||!navigator.onLine)){me=sid;Net.setBootOffline(true);await startApp()}
   else if(phase==="boot"){phase="auth";render()}
 })();
 
