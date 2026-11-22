@@ -15,8 +15,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@500;700;800&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<link rel="stylesheet" href="focus.css?v=202611230330">
-<link rel="stylesheet" href="features.css?v=202611230330">
+<link rel="stylesheet" href="focus.css?v=202611230400">
+<link rel="stylesheet" href="features.css?v=202611230400">
 <style>
 :root,:root[data-theme="night"]{
   color-scheme:dark;
@@ -211,20 +211,20 @@ nav.bottom{display:none}
 <div class="scrim" id="scrim"><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
 <div id="tip"></div>
 <div id="toast" role="status" aria-live="polite"></div>
-<script src="sound.js?v=202611230330"></script>
-<script src="scenes.js?v=202611230330"></script>
-<script src="backdrops.js?v=202611230330"></script>
-<script src="paintings.js?v=202611230330"></script>
-<script src="clocks.js?v=202611230330"></script>
-<script src="fx.js?v=202611230330"></script>
-<script src="points.js?v=202611230330"></script>
-<script src="focus.js?v=202611230330"></script>
-<script src="goals.js?v=202611230330"></script>
-<script src="insights.js?v=202611230330"></script>
-<script src="social.js?v=202611230330"></script>
-<script src="sync.js?v=202611230330"></script>
-<script src="keys.js?v=202611230330"></script>
-<script src="backup.js?v=202611230330"></script>
+<script src="sound.js?v=202611230400"></script>
+<script src="scenes.js?v=202611230400"></script>
+<script src="backdrops.js?v=202611230400"></script>
+<script src="paintings.js?v=202611230400"></script>
+<script src="clocks.js?v=202611230400"></script>
+<script src="fx.js?v=202611230400"></script>
+<script src="points.js?v=202611230400"></script>
+<script src="focus.js?v=202611230400"></script>
+<script src="goals.js?v=202611230400"></script>
+<script src="insights.js?v=202611230400"></script>
+<script src="social.js?v=202611230400"></script>
+<script src="sync.js?v=202611230400"></script>
+<script src="keys.js?v=202611230400"></script>
+<script src="backup.js?v=202611230400"></script>
 <script>
 "use strict";
 /* ============ CONFIG ============ */
@@ -303,7 +303,8 @@ function subjects(){
   Object.keys(c.subjMin).sort((a,b)=>(c.subjLast[b]||"").localeCompare(c.subjLast[a]||"")||c.subjMin[b]-c.subjMin[a]).forEach(s=>{if(!seen.has(s)){seen.add(s);out.push(s)}});
   return out;
 }
-function types(){return [...BASE_TYPES,...(settings().types||[]).filter(t=>!BASE_TYPES.includes(t))]}
+function hiddenTypes(){return (typeof Prefs!=="undefined"&&Prefs.get().hiddenTypes)||[]}
+function types(){const h=hiddenTypes();return [...BASE_TYPES.filter(t=>!h.includes(t)),...(settings().types||[]).filter(t=>!BASE_TYPES.includes(t))]}
 function focus(){
   if(settings().focus)return settings().focus;
   const cut=ymd(addDays(new Date(),-30));const m={};
@@ -523,11 +524,12 @@ function viewManage(){
   ${Social.privacyCard()}
   <div class="card"><h2>Focus subject</h2><p class="sub">Opens first in Stats and in the add-log form.</p>
    <div class="row"><select id="focusSel">${subs.map(s=>`<option ${s===focus()?"selected":""}>${esc(s)}</option>`).join("")}</select><button class="btn" data-act="saveFocus">Save focus</button></div></div>
-  <div class="card"><h2>Subjects</h2><p class="sub">Languages and anything else you track (aviation, programming…). Subjects with logs appear automatically.</p>
-   <div class="chips" style="margin-bottom:12px">${subs.map(s=>`<span class="chip">${esc(s)} <span class="muted num" style="font-size:12px">${H(c.subjMin[s]||0)}h</span>${pinned.includes(s)&&!c.subjMin[s]?`<button data-unpin="${esc(s)}" title="Remove">×</button>`:'<span style="width:6px"></span>'}</span>`).join("")}</div>
+  <div class="card"><h2>Subjects</h2><p class="sub">Languages and anything else you track (aviation, programming…). Subjects with logs appear automatically. × deletes one — you choose what happens to its logs.</p>
+   <div class="chips" style="margin-bottom:12px">${subs.map(s=>`<span class="chip">${esc(s)} <span class="muted num" style="font-size:12px">${H(c.subjMin[s]||0)}h</span><button data-delkind="subject" data-delname="${esc(s)}" title="Delete ${esc(s)}">×</button></span>`).join("")}</div>
    <div class="row"><select id="addLang"><option value="">Add a language…</option>${LANGS.filter(l=>!subs.includes(l)).map(l=>`<option>${l}</option>`).join("")}</select><input type="text" id="addOther" placeholder="…or anything else (e.g. Networking)"><button class="btn sec" data-act="addSubj">Add</button></div></div>
-  <div class="card"><h2>Activity types</h2><p class="sub">The eight standard types, plus your own (e.g. Simulator, Class, Coding).</p>
-   <div class="chips" style="margin-bottom:12px">${BASE_TYPES.map(t=>`<span class="chip" style="padding-right:12px">${t}</span>`).join("")}${(settings().types||[]).map(t=>`<span class="chip">${esc(t)}<button data-untype="${esc(t)}">×</button></span>`).join("")}</div>
+  <div class="card"><h2>Activity types</h2><p class="sub">The standard types plus your own (e.g. Simulator, Class, Coding). × deletes one — you choose what happens to its logs.</p>
+   <div class="chips" style="margin-bottom:12px">${types().map(t=>`<span class="chip">${esc(t)}<button data-delkind="type" data-delname="${esc(t)}" title="Delete ${esc(t)}">×</button></span>`).join("")}</div>
+   ${hiddenTypes().length?`<p class="sub" style="margin:0 0 10px">Hidden standard types: ${hiddenTypes().map(t=>`${esc(t)} <button class="linkb" data-unhide="${esc(t)}">bring back</button>`).join(" · ")}</p>`:""}
    <div class="row"><input type="text" id="newType" placeholder="New type"><button class="btn sec" data-act="addType">Add type</button></div></div>
   <div class="card"><h2>Sharing</h2><p class="sub">People you share with can see your logbook (read-only). Nobody else can.</p>
    <div class="chips" style="margin-bottom:12px">${myShares.map(p=>`<span class="chip">@${esc(p.username)}<button data-unshare="${p.id}" title="Stop sharing">×</button></span>`).join("")||'<span class="muted">Not shared with anyone.</span>'}</div>
@@ -655,7 +657,9 @@ function stopSave(){
 
 /* ============ events ============ */
 document.addEventListener("click",async e=>{
-  const a=e.target.closest("[data-act],[data-edit],[data-del],[data-again],[data-qdate],[data-mode],[data-r],[data-unpin],[data-untype],[data-unshare],[data-copytok],[data-deltok]");if(!a)return;
+  const a=e.target.closest("[data-delkind],[data-unhide],[data-act],[data-edit],[data-del],[data-again],[data-qdate],[data-mode],[data-r],[data-unpin],[data-untype],[data-unshare],[data-copytok],[data-deltok]");if(!a)return;
+  if(a.dataset.delkind){delDialog(a.dataset.delkind,a.dataset.delname);return}
+  if(a.dataset.unhide){const h=hiddenTypes().filter(t=>t!==a.dataset.unhide);await Prefs.set({hiddenTypes:h});toast(a.dataset.unhide+" is back");return}
   if(a.dataset.again){const l=all().logs.find(x=>x.i===a.dataset.again);if(!l)return;const n=await saveLog({a:l.a,s:l.s,t:l.t,m:l.m,d:today(),src:"manual"});actionToast(`Logged ${l.m} min of ${l.s} again today`,"Undo",()=>deleteLog(n),6000);return}
   if(a.dataset.qdate){const f=$("#fD");if(f)f.value=a.dataset.qdate;document.querySelectorAll("[data-qdate]").forEach(b=>b.classList.toggle("on",b===a));return}
   if(a.dataset.edit){const l=all().logs.find(x=>x.i===a.dataset.edit);if(l)openModal(l);return}
@@ -699,6 +703,7 @@ document.addEventListener("click",async e=>{
   else if(act==="delAccount2"){if(($("#delConfirm").value||"").trim().toLowerCase()!==myProfile.username)return toast("Type @"+myProfile.username+" without the @ to confirm");
     const {error}=await sb.rpc("delete_my_account");if(error)return toast(/function|schema cache/i.test(error.message)?"Run supabase-update-3.sql in Supabase first":"Couldn't delete: "+error.message,7000);
     const uid=me;Cache.clear(uid);["lb-prefs","lb-timeline","lb-points","lb-focus","lb-focus-at","lb-focus-synced","lb-room","lb-last"].forEach(k=>{try{localStorage.removeItem(k)}catch(_){}});await sb.auth.signOut();toast("Your account was deleted",6000)}
+  else if(act==="delGo")delGo();
   else if(act==="motion"){setMotion(a.dataset.v);render()}
   else if(act==="saveFocus"){saveSettings({focus:$("#focusSel").value});ui.statSubj=null;toast("Focus saved")}
   else if(act==="addSubj"){const v=($("#addOther").value.trim()||$("#addLang").value).slice(0,60);if(!v)return;if(!(settings().subjects||[]).includes(v))saveSettings({subjects:[...(settings().subjects||[]),v]});toast("Added "+v)}
@@ -756,6 +761,40 @@ async function switchView(id){
   viewProfile=id===me?myProfile:(await loadProfile(id))||{username:"?",subjects:[],types:[]};
   $("#view").innerHTML='<div class="empty-state">Loading…</div>';renderNav();renderBanner();
   try{await loadLogs()}catch(e){fail(e,"Couldn't load that logbook")}render();
+}
+/* Delete a subject or an activity type. Its logs are moved to another one, or deleted too. Undo restores everything. */
+let delState=null;
+function delDialog(kind,name){
+  const col=kind==="subject"?"s":"t";const list=all().logs.filter(l=>l[col]===name);const mins=list.reduce((a,l)=>a+l.m,0);
+  const others=(kind==="subject"?[...subjects(),...LANGS.filter(x=>!subjects().includes(x))]:types()).filter(x=>x!==name);
+  delState={kind,name,ids:list.map(l=>l.i)};
+  $("#modal").innerHTML=`<div class="row" style="margin-bottom:4px"><h2 style="font-size:19px">Delete ${kind} “${esc(name)}”</h2><span class="spacer"></span><button class="ib" data-act="close" aria-label="Close" style="font-size:20px">×</button></div>
+   ${list.length?`<p class="sub">It has <b>${list.length}</b> log${list.length>1?"s":""} (${dur(mins)}). What should happen to ${list.length>1?"them":"it"}?</p>
+    <label class="gchk"><input type="radio" name="delWhat" value="move" checked> Move ${list.length>1?"them":"it"} to <select id="delTo" style="margin-left:6px">${others.map(x=>`<option ${kind==="type"&&x==="Mixed"?"selected":""}>${esc(x)}</option>`).join("")}</select></label>
+    <label class="gchk"><input type="radio" name="delWhat" value="delete"> Delete ${list.length>1?`all ${list.length} logs`:"the log"} too</label>`
+   :`<p class="sub">No logs use it, so nothing else changes.</p>`}
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn sec" data-act="close">Cancel</button><button class="btn danger" data-act="delGo">Delete ${kind}</button></div>`;
+  $("#scrim").classList.add("open");
+}
+async function delGo(){
+  const st=delState;if(!st)return;const {kind,name}=st;const col=kind==="subject"?"subject":"type";
+  const what=(document.querySelector('input[name="delWhat"]:checked')||{}).value;const to=$("#delTo")?$("#delTo").value:null;
+  const list=logsArr.filter(l=>st.ids.includes(l.i)).map(l=>({...l}));closeModal();delState=null;
+  // settings before the change, so Undo can put them back
+  const prevSubs=settings().subjects||[],prevTypes=settings().types||[],prevHidden=hiddenTypes(),prevFocus=settings().focus;
+  if(list.length&&what==="delete"){const ids=new Set(list.map(l=>l.i));logsArr=logsArr.filter(l=>!ids.has(l.i));Net.write({op:"delete",ids:[...ids]})}
+  else if(list.length){for(const l of logsArr)if(st.ids.includes(l.i))patchLocal(l,{[col]:to});Net.write({op:"update",ids:list.map(l=>l.i),patch:{[col]:to}})}
+  invalidate();
+  const patch={};if(kind==="subject"){if(prevSubs.includes(name))patch.subjects=prevSubs.filter(x=>x!==name);if(prevFocus===name)patch.focus=null}
+  else if(prevTypes.includes(name))patch.types=prevTypes.filter(x=>x!==name);
+  if(Object.keys(patch).length)saveSettings(patch);
+  if(kind==="type"&&BASE_TYPES.includes(name))await Prefs.set({hiddenTypes:[...prevHidden,name]},true);
+  render();
+  actionToast(`Deleted ${name}${list.length?what==="delete"?` and its ${list.length} log${list.length>1?"s":""}`:` · ${list.length} log${list.length>1?"s":""} moved to ${to}`:""}`,"Undo",async()=>{
+    if(list.length&&what==="delete"){logsArr.push(...list);Net.write({op:"insert",rows:list.map(toRow)})}
+    else if(list.length){for(const l of logsArr)if(st.ids.includes(l.i))patchLocal(l,{[col]:name});Net.write({op:"update",ids:list.map(l=>l.i),patch:{[col]:name}})}
+    invalidate();if(Object.keys(patch).length)saveSettings({subjects:prevSubs,types:prevTypes,focus:prevFocus??null});
+    if(kind==="type"&&BASE_TYPES.includes(name))await Prefs.set({hiddenTypes:prevHidden},true);render();toast("Restored "+name)},10000);
 }
 function skeleton(){return `<div class="skel" aria-busy="true" aria-label="Loading"><i style="width:30%;height:28px"></i><i style="width:45%"></i><div class="skel-row"><i></i><i></i><i></i><i></i></div><i style="height:150px"></i><i style="height:220px"></i></div>`}
 async function startApp(){
