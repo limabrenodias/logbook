@@ -68,7 +68,9 @@ function parsePlaying(j) {
 
 if (typeof Deno !== "undefined") {
   const env = k => Deno.env.get(k) || "";
-  const SB = env("SUPABASE_URL"), KEY = env("SERVICE_KEY") || env("SUPABASE_SERVICE_ROLE_KEY");
+  const SB = env("SUPABASE_URL");
+  let KEY = env("SERVICE_KEY") || env("SUPABASE_SERVICE_ROLE_KEY");
+  if (!KEY) { try { const k = JSON.parse(env("SUPABASE_SECRET_KEYS") || "{}"); KEY = k.default || Object.values(k)[0] || ""; } catch (_) {} }
   const APP = env("APP_URL") || "https://limabrenodias.github.io/logbook/";
   const CID = env("SPOTIFY_CLIENT_ID"), CSECRET = env("SPOTIFY_CLIENT_SECRET");
   const REDIRECT = SB + "/functions/v1/spotify/callback";
@@ -142,7 +144,9 @@ if (typeof Deno !== "undefined") {
       }
       if (path === "/poll") {
         if (!env("CRON_SECRET") || req.headers.get("x-cron-secret") !== env("CRON_SECRET")) return json({ error: "forbidden" }, 403);
-        const links = await (await db("spotify_links?select=*")).json();
+        const lr = await db("spotify_links?select=*");
+        const links = await lr.json();
+        if (!lr.ok || !Array.isArray(links)) return json({ error: "Can't read the Spotify connections (" + lr.status + "): " + JSON.stringify(links).slice(0, 200) + (KEY ? "" : " — no service key available to the function") }, 500);
         const ids = links.map(l => l.user_id);
         const profs = ids.length ? await (await db("profiles?select=id,prefs&id=in.(" + ids.join(",") + ")")).json() : [];
         const pm = Object.fromEntries(profs.map(p => [p.id, p.prefs]));
