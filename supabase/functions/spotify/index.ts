@@ -70,7 +70,7 @@ if (typeof Deno !== "undefined") {
   const env = k => Deno.env.get(k) || "";
   const SB = env("SUPABASE_URL"), KEY = env("SERVICE_KEY") || env("SUPABASE_SERVICE_ROLE_KEY");
   const APP = env("APP_URL") || "https://limabrenodias.github.io/logbook/";
-  const CID = env("SPOTIFY_CLIENT_ID") || env("CLIENT_ID"), CSECRET = env("SPOTIFY_CLIENT_SECRET") || env("CLIENT_SECRET");
+  const CID = env("SPOTIFY_CLIENT_ID"), CSECRET = env("SPOTIFY_CLIENT_SECRET");
   const REDIRECT = SB + "/functions/v1/spotify/callback";
   const H = (extra = {}) => ({ apikey: KEY, ...(KEY.startsWith("sb_secret_") ? {} : { Authorization: "Bearer " + KEY }), "Content-Type": "application/json", ...extra });
   const db = (path, init = {}) => fetch(SB + "/rest/v1/" + path, { ...init, headers: H(init.headers || {}) });
