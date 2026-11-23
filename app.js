@@ -326,12 +326,13 @@ function viewManage(){
     <ol class="steps"><li><a href="extension/logbook-anki.ankiaddon" download>Download the add-on</a>, then in Anki: <b>Tools → Add-ons → Install from file…</b> and pick it. Restart Anki.</li>
      <li>Create a token above called “Anki”, press <b>Copy</b>, then in Anki: <b>Tools → Logbook…</b> → paste it.</li>
      <li>Choose a language for each deck, press <b>Save</b>. To fill in past days, pick a period and press <b>Send history</b>.</li></ol></div>
-   <div class="conn-ext"><b>YouTube tracker for Brave / Chrome / Edge</b>
-    <ol class="steps"><li><a href="extension/logbook-youtube.zip" download>Download the extension</a> and unzip it (right-click → Extract all).</li>
-     <li>Open <code>brave://extensions</code>, switch on <b>Developer mode</b> (top right), click <b>Load unpacked</b> and pick the unzipped <b>youtube</b> folder.</li>
-     <li>Create a token above called “YouTube on Brave”, press <b>Copy</b>, click the extension's icon → <b>Settings</b> → paste → <b>Save</b>.</li></ol></div></div>
+   <div class="conn-ext"><b>Language tracker for Brave / Chrome / Edge</b> <span class="muted">— watching, listening, reading and writing</span>
+    <ol class="steps"><li><a href="extension/logbook-tracker.zip" download>Download the tracker</a> and unzip it (right-click → Extract all).</li>
+     <li>Open <code>brave://extensions</code>, switch on <b>Developer mode</b> (top right), click <b>Load unpacked</b> and pick the unzipped <b>tracker</b> folder. If you had the old YouTube tracker, remove it first.</li>
+     <li>Create a token above called “Brave”, press <b>Copy</b>, click the extension's icon → <b>Settings</b> → paste → <b>Save</b>, and tick the languages you study.</li></ol></div></div>
   <div class="card"><h2>Import from Polylogger</h2><p class="sub">Pick your exported CSV. Rows already in your logbook are skipped, so importing again is safe.</p>
    <input type="file" id="csvFile" accept=".csv,text/csv"><div id="importBox"></div></div>
+  ${Spotify.card()}
   ${Backup.card()}
   <div class="card" id="accountCard"><h2>Account</h2><p class="sub">Signed in as <b>@${esc(myProfile.username)}</b>${ui.email?` · ${esc(ui.email)}`:""}.</p>
    <div class="acc"><label for="acUser">Username</label><div class="row"><input type="text" id="acUser" value="${esc(myProfile.username)}" autocapitalize="none" pattern="[a-z0-9_]{3,20}"><button class="btn sec" data-act="saveUser">Change</button></div>
@@ -606,7 +607,7 @@ async function startApp(){
   if(Net.bootOffline){render();launchAction();return}
   sb.auth.getUser().then(r=>{if(r.data&&r.data.user){ui.email=r.data.user.email;if(route()==="manage")render()}}).catch(()=>{});
   await Promise.all([loadLogs().catch(e=>{if(c)Net.markOffline();else fail(e,"Couldn't load your logs")}),Lib.load(me).catch(console.warn),loadShares().catch(console.error),loadTokens().catch(()=>{}),loadTimer().catch(()=>{})]);
-  render();Social.start();FocusSync.start();Net.flush();launchAction();
+  render();Social.start();FocusSync.start();Net.flush();launchAction();Spotify.launch();
 }
 async function afterLogin(){
   const p=await loadProfile(me).catch(e=>{const c=Cache.load(me);if(c&&c.profile)return c.profile;fail(e);return null});
@@ -645,7 +646,7 @@ setTheme(curTheme(),true);
   sb.auth.onAuthStateChange((event,session)=>{
     setTimeout(async()=>{
       if(event==="PASSWORD_RECOVERY"){recovering=true;me=session.user.id;phase="recovery";authMsg="";return render()}
-      if(event==="SIGNED_OUT"){Social.stop();Lib.reset();ui.sel=null;me=null;myProfile=null;viewing=null;logsArr=[];timer=null;invalidate();phase="auth";authMsg="";return render()}
+      if(event==="SIGNED_OUT"){Social.stop();Lib.reset();Spotify.reset();AnkiStats.reset();ui.sel=null;me=null;myProfile=null;viewing=null;logsArr=[];timer=null;invalidate();phase="auth";authMsg="";return render()}
       if((event==="SIGNED_IN"||event==="TOKEN_REFRESHED")&&session&&Net.bootOffline){Net.setBootOffline(false);me=session.user.id;return startApp()}
       if(event==="SIGNED_IN"&&session&&!recovering&&me!==session.user.id){me=session.user.id;await afterLogin()}
     },0);

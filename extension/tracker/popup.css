@@ -18,3 +18,5 @@ button.b{font:inherit;border:0;border-radius:8px;padding:7px 12px;background:var
 .sw{display:flex;gap:8px;align-items:flex-start;margin-top:8px;cursor:pointer}.sw input{margin-top:3px}
 .big{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
 p{margin:6px 0}a{color:var(--acc)}
+textarea{font:12.5px/1.5 ui-monospace,monospace;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;width:100%;resize:vertical}
+.sw span{flex:1}

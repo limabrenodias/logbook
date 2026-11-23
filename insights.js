@@ -100,7 +100,8 @@ const Insights={
       <div class="row" style="margin:6px 0 14px"><h2 style="margin:0">By subject</h2><span class="spacer"></span><select id="insSubj">${subjOptions(s,true)}</select></div>
       <div class="grid g2">${this.balance(s)}${this.weekday(s)}</div>
       <div class="grid g2">${this.hours()}${this.lengths(s)}</div>
-      <div class="grid g2">${this.momentum()}${this.milestones()}</div>`;
+      <div class="grid g2">${this.momentum()}${this.milestones()}</div>
+      ${AnkiStats.card()}`;
   },
   after(){Report.after();const a=$("#insWd");if(a&&this._wd)barChart(a,this._wd);const b=$("#insHr");if(b&&this._hr)barChart(b,this._hr)}
 };

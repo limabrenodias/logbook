@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Logbook — language tracker",
+  "version": "2.0.0",
+  "description": "Logs the time you actually spend watching, listening, reading and writing in the languages you study to your Logbook.",
+  "icons": {"16": "icon16.png", "32": "icon32.png", "48": "icon48.png", "128": "icon128.png"},
+  "action": {"default_popup": "popup.html", "default_title": "Logbook tracker", "default_icon": {"16": "icon16.png", "32": "icon32.png"}},
+  "background": {"service_worker": "background.js"},
+  "permissions": ["storage", "alarms", "idle"],
+  "host_permissions": ["<all_urls>"],
+  "content_scripts": [
+    {"matches": ["https://www.youtube.com/*", "https://m.youtube.com/*"], "js": ["page.js"], "run_at": "document_idle", "world": "MAIN"},
+    {"matches": ["http://*/*", "https://*/*"], "exclude_matches": ["https://limabrenodias.github.io/*"], "js": ["content.js"], "run_at": "document_idle"}
+  ]
+}

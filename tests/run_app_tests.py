@@ -146,6 +146,12 @@ def main():
         pg.click("[data-yropen]"); pg.wait_for_timeout(500); shot(pg, "year")
         check("year in review", pg.query_selector(".yr-hero") and pg.query_selector("#yrMonths svg"))
         pg.click("[data-insback]")
+        pg.evaluate("(()=>{const DB=JSON.parse(localStorage.getItem('mockdb'));const d=n=>{const x=new Date();x.setDate(x.getDate()-n);return x.toISOString().slice(0,10)};"
+                    "for(const n of [40,20,0])DB.anki_stats.push({user_id:me,d:d(n),deck:'Français',subject:'French',data:{mature:3000+(40-n)*5,young:400,new:900,learning:20,retention:0.9,retention_n:300,due_tomorrow:150,reviews_7d:900}});localStorage.setItem('mockdb',JSON.stringify(DB))})()")
+        pg.evaluate("AnkiStats.reset();render()"); pg.wait_for_timeout(600)
+        check("Anki statistics card", "3,200" in pg.inner_text("#view") or "3200" in pg.inner_text("#view"))
+        pg.evaluate("location.hash='#manage'"); pg.wait_for_timeout(500)
+        check("Spotify card offers to connect", pg.query_selector("[data-sp=connect]"))
 
         print("Focus sync")
         pg.evaluate("FocusSync.run()"); pg.wait_for_timeout(1200)

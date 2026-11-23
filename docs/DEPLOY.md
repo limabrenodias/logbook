@@ -37,7 +37,7 @@ A custom domain: add a `CNAME` file and set it under the repo's **Settings → P
 
 ## 5. Trackers
 
-- **YouTube (Brave/Chrome/Edge):** `extension/logbook-youtube.zip`. Load unpacked in developer mode for now; for public use, publish it on the Chrome Web Store (one-time developer fee) and change the Supabase URL/key in `extension/youtube/background.js` if you fork the project.
+- **Browser tracker (Brave/Chrome/Edge):** `extension/logbook-tracker.zip` — watching, listening, reading and writing in the languages you study. Load unpacked in developer mode for now; for public use, publish it on the Chrome Web Store (one-time developer fee) and change the Supabase URL/key in `extension/tracker/background.js` if you fork the project.
 - **Anki:** `extension/logbook-anki.ankiaddon` (Tools → Add-ons → Install from file). For public use, upload it to ankiweb.net/shared/addons. The Supabase URL/key are in `extension/anki/logbook_anki/core.py`.
 - Both send to the `ingest` function with a token the user creates in Setup → Connections.
 

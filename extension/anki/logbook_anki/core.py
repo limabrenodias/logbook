@@ -97,3 +97,41 @@ def since_ms(days: int) -> int:
         return 0
     start = _dt.datetime.now() - _dt.timedelta(days=days)
     return int(start.timestamp() * 1000)
+
+
+# ── Deck statistics (sent once a day) ──────────────────────────────────────
+def deck_stats(db_all, today_day: int, deck_ids: list, since_ms_30: int):
+    """db_all(sql, *args) -> rows. deck_ids: the deck and its subdecks. today_day: Anki's day number (col.sched.today).
+    Returns cards by stage, 30-day retention of mature cards, reviews due tomorrow and reviews in the last 7 days."""
+    if not deck_ids:
+        return None
+    ids = ",".join(str(int(i)) for i in deck_ids)
+    inn = f"(did in ({ids}) or odid in ({ids}))"
+    # type: 0 new, 1 learning, 2 review, 3 relearning; queue -1 = suspended
+    r = db_all(f"select sum(type=0), sum(type in (1,3)), sum(type=2 and ivl<21), sum(type=2 and ivl>=21), "
+               f"sum(queue=-1), count() from cards where {inn}")[0]
+    new, learning, young, mature, suspended, total = [int(x or 0) for x in r]
+    due = db_all(f"select count() from cards where {inn} and queue in (2,3) and due <= ?", today_day + 1)[0][0] or 0
+    ret = db_all(f"select sum(r.ease>1), count() from revlog r join cards c on c.id=r.cid "
+                 f"where (c.did in ({ids}) or c.odid in ({ids})) and r.type=1 and r.lastIvl>=21 and r.id>=?", since_ms_30)[0]
+    passed, n = int(ret[0] or 0), int(ret[1] or 0)
+    week = db_all(f"select count() from revlog r join cards c on c.id=r.cid where (c.did in ({ids}) or c.odid in ({ids})) "
+                  f"and r.id>=?", since_ms(7))[0][0] or 0
+    return {"new": new, "learning": learning, "young": young, "mature": mature, "suspended": suspended, "total": total,
+            "due_tomorrow": int(due), "retention": round(passed / n, 4) if n else None, "retention_n": n, "reviews_7d": int(week)}
+
+
+def send_stats(token: str, stats: list, timeout: int = 20):
+    if not stats:
+        return 0
+    body = json.dumps({"p_token": token, "p_stats": stats}).encode()
+    req = urllib.request.Request(SB_URL + "/rest/v1/rpc/ingest_stats", data=body, method="POST",
+                                 headers={"Content-Type": "application/json", "apikey": SB_KEY})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            r.read()
+    except urllib.error.HTTPError as e:
+        if e.code == 404:   # the Logbook database doesn't have update 5 yet — time logging still works
+            return 0
+        raise RuntimeError(f"Logbook answered {e.code} for statistics")
+    return len(stats)

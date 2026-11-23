@@ -10,6 +10,7 @@ Personal study-time tracker (languages, aviation, programming…) with Supabase 
 - `sw.js` — offline support; the app also keeps a copy of your logbook and an outbox of unsent changes on each device
 - `supabase-update-4.sql` — update 4: resources, scores, blocking, abuse limits, error reports, private study rooms (run once)
 - `config.js` — Supabase address/key, CAPTCHA site key, version, contact email
-- `extension/logbook-anki.ankiaddon` — Anki add-on (time per deck); `extension/logbook-youtube.zip` — YouTube tracker
+- `extension/logbook-anki.ankiaddon` — Anki add-on (time per deck); `extension/logbook-tracker.zip` — browser language tracker (watching, listening, reading, writing)
+- `supabase/functions/spotify` — Spotify podcast tracker (runs on Supabase every minute; setup in `docs/SPOTIFY.md`)
 - `docs/DEPLOY.md` — how to run your own copy and the checklist before going public
 - `tests/` — end-to-end tests (`python tests/run_app_tests.py`) and SQL security checks (`tests/sql_test.sh`); GitHub runs both on every push

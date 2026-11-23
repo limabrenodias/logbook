@@ -1,7 +1,7 @@
 /* In-browser stand-in for Supabase used by the tests: tables live in localStorage, auth in sessionStorage,
    realtime over BroadcastChannel. Set localStorage 'mock-offline' to '1' to simulate no connection. */
 (()=>{
-const EMPTY='{"profiles":[],"logs":[],"timers":[],"shares":[],"ingest_tokens":[],"users":[],"friendships":[],"reactions":[],"presence":[],"focus_sessions":[],"focus_awards":[],"resources":[],"scores":[],"client_errors":[],"blocks":[],"room_members":[]}';
+const EMPTY='{"profiles":[],"logs":[],"timers":[],"shares":[],"ingest_tokens":[],"users":[],"friendships":[],"reactions":[],"presence":[],"focus_sessions":[],"focus_awards":[],"resources":[],"scores":[],"client_errors":[],"blocks":[],"room_members":[],"anki_stats":[]}';
 let DB;const ld=()=>{DB=JSON.parse(localStorage.getItem('mockdb')||EMPTY);for(const k of Object.keys(JSON.parse(EMPTY)))DB[k]=DB[k]||[]};ld();
 const save=()=>localStorage.setItem('mockdb',JSON.stringify(DB));
 let session=JSON.parse(sessionStorage.getItem('mocksess')||'null');const subs=[];
@@ -9,7 +9,7 @@ const uuid=()=>crypto.randomUUID();const uidf=()=>session&&session.user.id;
 const NOPRESENCE=localStorage.getItem('mock-nosql')==='1';
 class Q{constructor(t){this.t=t;this.f=[];this.op='select';this.ord=[];}
  select(){this.ret=true;return this}
- eq(c,v){this.f.push(r=>r[c]===v);return this} in(c,v){this.f.push(r=>v.includes(r[c]));return this}
+ eq(c,v){this.f.push(r=>r[c]===v);return this} gte(c,v){this.f.push(r=>r[c]>=v);return this} lte(c,v){this.f.push(r=>r[c]<=v);return this} in(c,v){this.f.push(r=>v.includes(r[c]));return this}
  limit(n){this.lim=n;return this}
  order(c,o){this.ord.push([c,o&&o.ascending===false?-1:1]);return this} range(a,b){this.rg=[a,b];return this}
  maybeSingle(){this.one='maybe';return this} single(){this.one='single';return this}
@@ -30,7 +30,7 @@ class Q{constructor(t){this.t=t;this.f=[];this.op='select';this.ord=[];}
   else if(this.op==='delete'){out=T.filter(r=>this.f.every(f=>f(r)));const keep=T.filter(r=>!this.f.every(f=>f(r)));DB[this.t]=keep;save()}
   else{out=T.filter(r=>this.f.every(f=>f(r)));
      if(this.t==='logs')out=out.filter(r=>r.user_id===uid||DB.shares.some(s=>s.owner===r.user_id&&s.viewer===uid));
-     if(this.t==='shares')out=out.filter(s=>s.owner===uid||s.viewer===uid);if(['focus_sessions','focus_awards','resources','scores'].includes(this.t))out=out.filter(r=>r.user_id===uid||DB.shares.some(s=>s.owner===r.user_id&&s.viewer===uid));
+     if(this.t==='shares')out=out.filter(s=>s.owner===uid||s.viewer===uid);if(['focus_sessions','focus_awards','resources','scores','anki_stats'].includes(this.t))out=out.filter(r=>r.user_id===uid||DB.shares.some(s=>s.owner===r.user_id&&s.viewer===uid));
      for(const [c,o] of [...this.ord].reverse())out=[...out].sort((a,b)=>(a[c]>b[c]?1:a[c]<b[c]?-1:0)*o);
      if(this.rg)out=out.slice(this.rg[0],this.rg[1]+1);if(this.lim)out=out.slice(0,this.lim);}
   if(this.one)return{data:out[0]||null,error:null};return{data:out,error:null};}}
@@ -45,6 +45,7 @@ const isF=(a,b)=>DB.friendships.some(f=>f.status==='accepted'&&((f.requester===a
 const fresh=p=>p&&Date.now()-Date.parse(p.updated_at)<180000;
 const addD=(s,n)=>{const d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
 const RPC={
+ spotify_status(){return {connected:false}},
  delete_my_account(){const me=uidf();for(const t of ['logs','profiles','friendships','presence','focus_sessions','focus_awards','ingest_tokens'])DB[t]=DB[t].filter(r=>![r.user_id,r.id,r.requester,r.addressee].includes(me));DB.users=DB.users.filter(u=>u.id!==me);save();return null},
  find_user:a=>(DB.profiles.find(p=>p.username===a.p_username)||{}).id||null,
  friend_request(a){const me=uidf();const u=a.p_username.replace(/^@/,'').trim().toLowerCase();const t=DB.profiles.find(p=>p.username===u);if(!t)return 'not_found';if(t.id===me)return 'self';

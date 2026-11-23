@@ -42,6 +42,22 @@ def gather(days):
     return core.collect(rows, names, cfg()["decks"], rollover())
 
 
+def gather_stats():
+    """Cards, retention and reviews due for each deck you've given a language."""
+    col = mw.col
+    names = {d.name: d.id for d in col.decks.all_names_and_ids()}
+    day = core.anki_day(int(__import__("time").time() * 1000), rollover())
+    out = []
+    for name, rule in cfg()["decks"].items():
+        if rule.get("ignore") or name not in names:
+            continue
+        ids = list(col.decks.deck_and_child_ids(names[name]))
+        st = core.deck_stats(col.db.all, col.sched.today, ids, core.since_ms(30))
+        if st:
+            out.append({"date": day, "deck": name[:200], "subject": rule.get("subject"), "data": st})
+    return out
+
+
 def sync(days=None, quiet=True):
     c = cfg()
     if not c["token"] or not mw.col:
@@ -58,15 +74,30 @@ def sync(days=None, quiet=True):
             tooltip("Logbook: nothing to send yet")
         return
 
+    stats = []
+    try:
+        if c.get("stats_day") != core.anki_day(int(__import__("time").time() * 1000), rollover()) or not quiet:
+            stats = gather_stats()
+    except Exception as e:
+        print("Logbook stats:", e)
+
     def work():
-        return core.send(c["token"], entries)
+        n = core.send(c["token"], entries)
+        if stats:
+            try:
+                core.send_stats(c["token"], stats)
+            except Exception as e:
+                print("Logbook stats:", e)
+        return n
 
     def done(fut):
         c2 = cfg()
         try:
             n = fut.result()
             import datetime
-            c2["last"] = f"Sent {n} day·deck totals at {datetime.datetime.now():%H:%M}"
+            c2["last"] = f"Sent {n} day·deck totals at {datetime.datetime.now():%H:%M}" + (" (and deck statistics)" if stats else "")
+            if stats:
+                c2["stats_day"] = stats[0]["date"]
             save_cfg(c2)
             if not quiet:
                 tooltip(f"Logbook: sent {n} entries")
