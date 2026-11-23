@@ -7,7 +7,7 @@ closes. Re-sending a day updates it, so nothing is ever counted twice.
 from __future__ import annotations
 from aqt import mw, gui_hooks
 from aqt.qt import (QAction, QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel, QLineEdit, QComboBox,
-                    QPushButton, QTableWidget, QTableWidgetItem, QHeaderView, QSpinBox, QMessageBox, QTimer)
+                    QPushButton, QTreeWidget, QTreeWidgetItem, QHeaderView, QSpinBox, QMessageBox, QTimer)
 from aqt.utils import tooltip
 from . import core
 
@@ -16,6 +16,7 @@ LANGS = ["French", "Polish", "German", "Spanish", "English", "Portuguese", "Ital
 TYPES = ["Vocabulary", "Grammar", "Reading", "Listening", "Mixed", "Pronunciation", "Speaking", "Writing"]
 IGNORE = "— don't log —"
 NOT_SET = "— not set —"
+SAME = "— same as parent deck —"
 
 
 def cfg():
@@ -129,11 +130,13 @@ class Settings(QDialog):
         self.days.setSuffix(" days")
         form.addRow("Re-check the last", self.days)
         lay.addLayout(form)
-        lay.addWidget(QLabel("<b>Decks</b> — subdecks follow their parent unless you set them too."))
-        self.table = QTableWidget(0, 4)
-        self.table.setHorizontalHeaderLabels(["Deck", "Logged as", "Type", "Last 30 days"])
-        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        lay.addWidget(self.table)
+        lay.addWidget(QLabel("<b>Decks</b> — click ▸ to open a deck and set its subdecks. "
+                             "A subdeck left on “same as parent” is logged together with its parent."))
+        self.tree = QTreeWidget()
+        self.tree.setColumnCount(4)
+        self.tree.setHeaderLabels(["Deck", "Logged as", "Type", "Last 30 days"])
+        self.tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        lay.addWidget(self.tree)
         self.fill(c)
         self.status = QLabel(c.get("last") or "Not sent yet.")
         self.status.setWordWrap(True)
@@ -149,34 +152,45 @@ class Settings(QDialog):
     def fill(self, c):
         names = sorted(d.name for d in mw.col.decks.all_names_and_ids())
         try:
-            _, minutes = self.minutes_30()
+            minutes = self.minutes_30()
         except Exception:
             minutes = {}
-        shown = [n for n in names if "::" not in n] + [n for n in names if "::" in n and n in c["decks"]]
-        self.rows = []
-        for n in shown:
-            r = self.table.rowCount(); self.table.insertRow(r)
-            self.table.setItem(r, 0, QTableWidgetItem(n.replace("::", " › ")))
+        items, self.rows = {}, []
+        for n in names:  # sorted, so a parent always comes before its subdecks
+            parent = n.rsplit("::", 1)[0] if "::" in n else None
+            it = QTreeWidgetItem([n.split("::")[-1], "", "", f"{round(minutes.get(n, 0) / 60000)} min"])
+            (items[parent].addChild(it) if parent in items else self.tree.addTopLevelItem(it))
+            items[n] = it
+            first = SAME if parent in items else NOT_SET
             rule = c["decks"].get(n)
             subj = QComboBox(); subj.setEditable(True)
-            subj.addItems([NOT_SET, IGNORE] + LANGS)
+            subj.addItems([first, IGNORE] + LANGS)
             if rule:
-                subj.setCurrentText(IGNORE if rule.get("ignore") else rule.get("subject", NOT_SET))
+                subj.setCurrentText(IGNORE if rule.get("ignore") else rule.get("subject", first))
             typ = QComboBox(); typ.addItems(TYPES)
             if rule and rule.get("type"):
                 typ.setCurrentText(rule["type"])
-            self.table.setCellWidget(r, 1, subj); self.table.setCellWidget(r, 2, typ)
-            self.table.setItem(r, 3, QTableWidgetItem(f"{round(minutes.get(n, 0) / 60000)} min"))
+            self.tree.setItemWidget(it, 1, subj); self.tree.setItemWidget(it, 2, typ)
             self.rows.append((n, subj, typ))
+        # open the decks that have a subdeck with its own setting, so you can see it
+        for n in c["decks"]:
+            p = n
+            while "::" in p:
+                p = p.rsplit("::", 1)[0]
+                if p in items:
+                    items[p].setExpanded(True)
+        for col in (1, 2, 3):
+            self.tree.resizeColumnToContents(col)
 
     def minutes_30(self):
         names = {d.id: d.name for d in mw.col.decks.all_names_and_ids()}
-        rows = mw.col.db.all(core.REVLOG_SQL, core.since_ms(30))
         per = {}
-        for _, ms, did in rows:
-            top = names.get(did, "").split("::")[0]
-            per[top] = per.get(top, 0) + (ms or 0)
-        return None, per
+        for _, ms, did in mw.col.db.all(core.REVLOG_SQL, core.since_ms(30)):
+            parts = names.get(did, "").split("::")
+            for i in range(1, len(parts) + 1):  # a subdeck's time also counts in each parent's total
+                k = "::".join(parts[:i])
+                per[k] = per.get(k, 0) + (ms or 0)
+        return per
 
     def read(self):
         c = cfg()
@@ -187,7 +201,7 @@ class Settings(QDialog):
             v = subj.currentText().strip()
             if v == IGNORE:
                 decks[n] = {"ignore": True}
-            elif v and v != NOT_SET:
+            elif v and v not in (NOT_SET, SAME):
                 decks[n] = {"subject": v[:60], "type": typ.currentText()}
         c["decks"] = decks
         return c
