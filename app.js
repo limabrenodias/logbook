@@ -319,7 +319,7 @@ function viewManage(){
    <div class="chips" style="margin-bottom:12px">${myShares.map(p=>`<span class="chip">@${esc(p.username)}<button data-unshare="${p.id}" title="Stop sharing">×</button></span>`).join("")||'<span class="muted">Not shared with anyone.</span>'}</div>
    <div class="row"><input type="text" id="shareUser" placeholder="Their username"><button class="btn sec" data-act="share">Share</button></div>
    ${sharedWithMe.length?`<p class="sub" style="margin:14px 0 6px">Shared with you: ${sharedWithMe.map(p=>"@"+esc(p.username)).join(", ")} — switch logbooks from the menu.</p>`:""}</div>
-  <div class="card"><h2>Connections</h2><p class="sub">Tokens let your trackers (Anki add-on, YouTube extension, Spotify sync) add logs automatically. Treat a token like a password; delete it to disconnect that tracker.</p>
+  <div class="card"><h2>Connections</h2><p class="sub">Tokens let your trackers (Anki add-on, browser tracker) add logs automatically. Spotify connects separately, below. Treat a token like a password; delete it to disconnect that tracker.</p>
    ${tokens.map(t=>`<div class="log"><div class="main"><div class="act">${esc(t.name)}</div><div class="meta num">${esc(t.token.slice(0,6))}…${esc(t.token.slice(-4))}</div></div><button class="btn sec" data-copytok="${esc(t.token)}">Copy</button><button class="ib" data-deltok="${esc(t.token)}" title="Delete">${ICONS.del}</button></div>`).join("")||'<p class="muted">No connections yet.</p>'}
    <div class="row" style="margin-top:10px"><input type="text" id="tokName" placeholder="Name (e.g. Anki on PC)"><button class="btn sec" data-act="newToken">Create token</button></div>
    <div class="conn-ext"><b>Anki — time per deck</b>
