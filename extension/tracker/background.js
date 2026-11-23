@@ -110,12 +110,21 @@ function entries(st) {
   return [...out.values()].filter(e => e.sec >= min).map(e => ({ ...e, minutes: Math.round(e.sec / 60) }));
 }
 
-async function flush() {
+async function flush(check) {
   const st = await get(); const now = Date.now();
   const cut = new Date(now - 14 * 864e5).toISOString().slice(0, 10);
   for (const k of Object.keys(st.sessions)) if (st.sessions[k].date < cut) delete st.sessions[k];
   st.status.lastTry = now;
   if (!st.settings.token) { st.status.error = "no-token"; await chrome.storage.local.set({ sessions: st.sessions, status: st.status }); return st.status; }
+  if (st.status.error === "no-token") st.status.error = "";          // a token was pasted since the last try
+  if (check || st.status.checkedToken !== st.settings.token) {        // new token: make sure Logbook accepts it
+    try {
+      const r = await fetch(SB_URL + "/rest/v1/rpc/token_lists", { method: "POST", headers: { "Content-Type": "application/json", apikey: SB_KEY }, body: JSON.stringify({ p_token: st.settings.token }) });
+      if (r.ok) { st.status.error = ""; st.status.checkedToken = st.settings.token; st.status.lastOk = now; }
+      else if (/invalid token/.test(await r.text())) st.status.error = "bad-token";
+      else st.status.checkedToken = st.settings.token;                 // older database without the check: rely on sending instead
+    } catch (_) { st.status.error = "offline"; }
+  }
   const todo = entries(st).filter(e => e.keys.some(k => st.sessions[k].sentMin !== e.minutes || st.sessions[k].sentAs !== e.subject + "|" + e.type));
   if (todo.length) {
     try {
