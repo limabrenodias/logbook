@@ -21,7 +21,7 @@ SAME = "— same as parent deck —"
 
 def cfg():
     c = mw.addonManager.getConfig(__name__) or {}
-    c.setdefault("token", ""); c.setdefault("decks", {}); c.setdefault("resend_days", 3); c.setdefault("last", "")
+    c.setdefault("token", ""); c.setdefault("decks", {}); c.setdefault("resend_days", 3); c.setdefault("last", ""); c.setdefault("lists", None)
     return c
 
 
@@ -126,18 +126,25 @@ class Settings(QDialog):
         self.token = QLineEdit(c["token"]); self.token.setEchoMode(QLineEdit.EchoMode.Password)
         self.token.setPlaceholderText("Paste your token")
         form.addRow("Token", self.token)
+        self.token.editingFinished.connect(self.load_lists)
         self.days = QSpinBox(); self.days.setRange(1, 60); self.days.setValue(int(c.get("resend_days", 3)))
         self.days.setSuffix(" days")
         form.addRow("Re-check the last", self.days)
         lay.addLayout(form)
         lay.addWidget(QLabel("<b>Decks</b> — click ▸ to open a deck and set its subdecks. "
                              "A subdeck left on “same as parent” is logged together with its parent."))
+        self.source = QLabel("")
+        self.source.setWordWrap(True)
+        lay.addWidget(self.source)
         self.tree = QTreeWidget()
         self.tree.setColumnCount(4)
         self.tree.setHeaderLabels(["Deck", "Logged as", "Type", "Last 30 days"])
         self.tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         lay.addWidget(self.tree)
+        self.lists = c.get("lists")
         self.fill(c)
+        if c["token"]:
+            QTimer.singleShot(50, self.load_lists)
         self.status = QLabel(c.get("last") or "Not sent yet.")
         self.status.setWordWrap(True)
         lay.addWidget(self.status)
@@ -149,7 +156,19 @@ class Settings(QDialog):
         row.addWidget(b_save)
         lay.addLayout(row)
 
+    def options(self):
+        L = self.lists or {}
+        subs, typs = L.get("subjects") or [], L.get("types") or []
+        if L:
+            self.source.setText(f"Subjects and types come from your Logbook{(' (@' + L['username'] + ')') if L.get('username') else ''}. "
+                                "Add or rename them in Logbook, then reopen this window. You can also type a new one here.")
+        else:
+            self.source.setText("Showing a default list — paste your token to use the subjects and types from your own Logbook.")
+        return (subs or LANGS), (typs or TYPES)
+
     def fill(self, c):
+        self.tree.clear()
+        subs, typs = self.options()
         names = sorted(d.name for d in mw.col.decks.all_names_and_ids())
         try:
             minutes = self.minutes_30()
@@ -164,12 +183,15 @@ class Settings(QDialog):
             first = SAME if parent in items else NOT_SET
             rule = c["decks"].get(n)
             subj = QComboBox(); subj.setEditable(True)
-            subj.addItems([first, IGNORE] + LANGS)
+            own = rule.get("subject") if rule and not rule.get("ignore") else None
+            subj.addItems([first, IGNORE] + subs + ([own] if own and own not in subs else []))
             if rule:
                 subj.setCurrentText(IGNORE if rule.get("ignore") else rule.get("subject", first))
-            typ = QComboBox(); typ.addItems(TYPES)
-            if rule and rule.get("type"):
-                typ.setCurrentText(rule["type"])
+            typ = QComboBox(); typ.setEditable(True)
+            t_own = rule.get("type") if rule else None
+            typ.addItems(typs + ([t_own] if t_own and t_own not in typs else []))
+            if t_own:
+                typ.setCurrentText(t_own)
             self.tree.setItemWidget(it, 1, subj); self.tree.setItemWidget(it, 2, typ)
             self.rows.append((n, subj, typ))
         # open the decks that have a subdeck with its own setting, so you can see it
@@ -192,6 +214,25 @@ class Settings(QDialog):
                 per[k] = per.get(k, 0) + (ms or 0)
         return per
 
+    def load_lists(self):
+        tok = self.token.text().strip()
+        if not tok:
+            return
+        def work():
+            return core.fetch_lists(tok)
+        def done(fut):
+            try:
+                L = fut.result()
+            except Exception as e:
+                self.source.setText(str(e)); return
+            if not L or L == self.lists:
+                return
+            keep = self.read()          # keep what you've chosen so far in this window
+            self.lists = L
+            c = cfg(); c["lists"] = L; save_cfg(c)
+            self.fill(keep)
+        mw.taskman.run_in_background(work, done)
+
     def read(self):
         c = cfg()
         c["token"] = self.token.text().strip()
@@ -202,7 +243,7 @@ class Settings(QDialog):
             if v == IGNORE:
                 decks[n] = {"ignore": True}
             elif v and v not in (NOT_SET, SAME):
-                decks[n] = {"subject": v[:60], "type": typ.currentText()}
+                decks[n] = {"subject": v[:60], "type": (typ.currentText().strip() or "Mixed")[:40]}
         c["decks"] = decks
         return c
 

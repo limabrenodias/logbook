@@ -10,6 +10,8 @@ Logbook is a static site (GitHub Pages) talking to one Supabase project. There's
    2. `supabase-social.sql` — synced settings, friends, reactions, live status, communities
    3. `supabase-update-3.sql` — Focus sessions & points sync, account deletion
    4. `supabase-update-4.sql` — resources, scores, blocking, limits, error reports, private rooms
+   5. `supabase-update-5.sql` — Anki deck statistics, Spotify tracker
+   6. `supabase-update-6.sql` — trackers show your own subjects and activity types
 3. **Project Settings → API keys**: copy the *publishable* key into `config.js`. Never put the secret / `service_role` key in the site.
 4. **Authentication → URL Configuration**: Site URL = your site address (e.g. `https://limabrenodias.github.io/logbook/`), and add the same address to Redirect URLs.
 

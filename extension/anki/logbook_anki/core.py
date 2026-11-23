@@ -135,3 +135,25 @@ def send_stats(token: str, stats: list, timeout: int = 20):
             return 0
         raise RuntimeError(f"Logbook answered {e.code} for statistics")
     return len(stats)
+
+
+def fetch_lists(token: str, timeout: int = 8):
+    """Your own subjects and activity types from your Logbook account (needs database update 6).
+    Returns {"username", "subjects": [...], "types": [...]} or None if it can't be reached."""
+    body = json.dumps({"p_token": token}).encode()
+    req = urllib.request.Request(SB_URL + "/rest/v1/rpc/token_lists", data=body, method="POST",
+                                 headers={"Content-Type": "application/json", "apikey": SB_KEY})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            j = json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        if "invalid token" in e.read().decode("utf-8", "replace"):
+            raise RuntimeError("The token was rejected — copy it again from Logbook → Setup → Connections.")
+        return None
+    except Exception:
+        return None
+    if not isinstance(j, dict):
+        return None
+    return {"username": j.get("username") or "", "subjects": [s for s in (j.get("subjects") or []) if s][:80],
+            "types": [t for t in (j.get("types") or []) if t][:60]}
+

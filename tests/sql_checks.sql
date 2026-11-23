@@ -33,6 +33,17 @@ select block_user('00000000-0000-0000-0000-00000000000b');
 set request.uid='00000000-0000-0000-0000-00000000000b';
 do $$begin if friend_request('alice') <> 'not_found' then raise exception 'blocked user can still send requests'; end if; end$$;
 do $$begin begin perform * from client_errors; raise exception 'users can read error reports'; exception when insufficient_privilege then null; end; end$$;
+reset role;
+do $$declare tk text; j jsonb; begin
+  update profiles set subjects='{Medicine}', types='{Anatomy}', prefs=prefs||'{"hiddenTypes":["Speaking"]}' where id='00000000-0000-0000-0000-00000000000a';
+  insert into ingest_tokens(user_id,name) values('00000000-0000-0000-0000-00000000000a','t') returning token into tk;
+  j := token_lists(tk);
+  if j->'subjects'->>0 <> 'Medicine' then raise exception 'pinned subject should come first: %', j; end if;
+  if not (j->'types') ? 'Anatomy' then raise exception 'custom type missing: %', j; end if;
+  if (j->'types') ? 'Speaking' then raise exception 'hidden type shown: %', j; end if;
+  begin perform token_lists('nope'); raise exception 'bad token accepted'; exception when sqlstate '28000' then null; end;
+end$$;
+set role authenticated;
 set request.uid='00000000-0000-0000-0000-00000000000a';
 select delete_my_account();
 reset role;
