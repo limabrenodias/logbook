@@ -26,9 +26,14 @@ const ICONS={
  again:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 9"/><path d="M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-13.7 5.6L4 15"/><path d="M4 20v-5h5"/></svg>',
  manage:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>',
  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
- del:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>'
+ del:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>',
+ progress:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 20l5-9 4 5 2-3 3 7"/><path d="M14 4h4v4"/><path d="M18 4l-5 5"/></svg>',
+ more:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>',
+ logo:'<svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="8" fill="var(--accent)"/><path d="M10 9v14h12" fill="none" stroke="var(--accent-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="21.5" cy="11.5" r="2.5" fill="var(--accent-ink)"/></svg>'
 };
-const ROUTES=[["insights","Insights"],["home","Home"],["focus","Focus"],["friends","Friends"],["stats","Stats"],["logs","Logs"],["manage","Setup"]];
+const ROUTES=[["home","Home"],["progress","Progress"],["focus","Focus"],["logs","Logs"],["stats","Stats"],["insights","Insights"],["friends","Friends"],["manage","Setup"]];
+const NAV_GROUPS=[[null,["home","progress","focus"]],["Study",["logs","stats","insights"]],["Together",["friends"]]];
+const MOBILE_NAV=["home","progress","focus","friends"];
 const THEMES=[["night","Night"],["daylight","Daylight"],["matcha","Matcha"],["dusk","Dusk"],["ocean","Ocean"],["sakura","Sakura"]];
 function curTheme(){let t=null;try{t=localStorage.getItem("lb-theme")}catch(_){}if(t==="dark")t="night";if(t==="light")t="daylight";return THEMES.some(x=>x[0]===t)?t:(matchMedia("(prefers-color-scheme: light)").matches?"daylight":"night")}
 function setTheme(t,silent){document.documentElement.dataset.theme=t;try{localStorage.setItem("lb-theme",t)}catch(_){}const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();if(!silent)render()}
@@ -217,13 +222,25 @@ function ratioBars(rows){const tot=rows.reduce((a,r)=>a+r[1],0)||1;const max=Mat
 function route(){const h=(location.hash||"#home").slice(1);return ROUTES.some(r=>r[0]===h)?h:"home"}
 function renderNav(){
   const app=phase==="app";$("#fab").style.display=app&&!readOnly()?"":"none";
-  if(!app){$("#sidenav").innerHTML=`<div class="brand">LOG<b>BOOK</b></div><div class="grow"></div><button class="ghost" data-act="theme">Toggle theme</button>`;$("#bottomnav").innerHTML="";return}
-  const r=route();const links=ROUTES.map(([k,t])=>`<a class="nl ${k===r?"on":""}" href="#${k}">${ICONS[k]}<span>${t}</span></a>`).join("");
-  const sw=sharedWithMe.length?`<select id="viewSel" style="margin:0 4px 14px">${[{id:me,username:myProfile.username+" (me)"},...sharedWithMe].map(p=>`<option value="${p.id}" ${p.id===viewing?"selected":""}>@${esc(p.username)}</option>`).join("")}</select>`:"";
-  $("#sidenav").innerHTML=`<div class="brand">LOG<b>BOOK</b></div>${sw}${links}<div class="grow"></div><div class="muted" style="font-size:13px;padding:0 12px 8px">@${esc(myProfile.username)}</div><button class="ghost" data-act="theme" style="margin-bottom:6px">Toggle theme</button><button class="ghost" data-act="logout">Log out</button>`;
-  $("#bottomnav").innerHTML=links;
-  $("#mswitch").innerHTML=sw?sw.replace('id="viewSel"','id="viewSelM"').replace("margin:0 4px 14px","margin:0"):"";
+  const brand=`<a class="brandmark" href="#home" aria-label="Logbook home">${ICONS.logo}<span>Logbook</span></a>`;
+  if(!app){$("#sidenav").innerHTML=`${brand}<div class="grow"></div><button class="ghost" data-act="theme">Toggle theme</button>`;$("#bottomnav").innerHTML="";$("#mcoins").innerHTML="";return}
+  const r=route();const name=Object.fromEntries(ROUTES);const link=k=>`<a class="nl ${k===r?"on":""}" href="#${k}" ${k===r?'aria-current="page"':""}>${ICONS[k]}<span>${name[k]}</span></a>`;
+  const sw=sharedWithMe.length?`<select id="viewSel" class="view-sel">${[{id:me,username:myProfile.username+" (me)"},...sharedWithMe].map(p=>`<option value="${p.id}" ${p.id===viewing?"selected":""}>@${esc(p.username)}</option>`).join("")}</select>`:"";
+  let bal="";try{if(!readOnly()&&typeof Rewards!=="undefined")bal=`<a class="coin-chip" href="#progress" title="Your coins — see Progress">${coins(Rewards.balance())}</a>`}catch(e){console.warn(e)}
+  const groups=NAV_GROUPS.map(([label,ks])=>`<div class="ngroup">${label?`<div class="nlabel">${label}</div>`:""}${ks.map(link).join("")}</div>`).join("");
+  $("#sidenav").innerHTML=`<div class="side-top">${brand}${bal}</div>${sw}${groups}<div class="grow"></div>${link("manage")}
+    <div class="me-row"><span class="avatar" aria-hidden="true">${esc((myProfile.username||"?")[0].toUpperCase())}</span><span class="grow1 muted">@${esc(myProfile.username)}</span>
+    <button class="ib" data-act="theme" title="Change theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></button>
+    <button class="ib" data-act="logout" title="Log out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l4-4-4-4M14 12H4"/></svg></button></div>`;
+  const moreOn=!MOBILE_NAV.includes(r);
+  $("#bottomnav").innerHTML=MOBILE_NAV.map(link).join("")+`<button class="nl ${moreOn?"on":""}" data-act="more" aria-haspopup="dialog">${ICONS.more}<span>${moreOn?name[r]:"More"}</span></button>`;
+  $("#mswitch").innerHTML=sw?sw.replace('id="viewSel"','id="viewSelM"'):"";$("#mcoins").innerHTML=bal;
 }
+function moreSheet(){const r=route();const name=Object.fromEntries(ROUTES);
+  $("#modal").innerHTML=`<div class="row" style="margin-bottom:10px"><h2 style="font-size:19px">More</h2><span class="spacer"></span><button class="ib" data-act="close" aria-label="Close" style="font-size:20px">×</button></div>
+    <div class="more-grid">${ROUTES.filter(([k])=>!MOBILE_NAV.includes(k)).map(([k])=>`<a class="more-i ${k===r?"on":""}" href="#${k}" data-act="close">${ICONS[k]}<span>${name[k]}</span></a>`).join("")}</div>
+    <div class="row" style="margin-top:16px"><button class="btn sec" data-act="theme">Theme</button><span class="spacer"></span><button class="btn sec" data-act="logout">Log out</button></div>`;
+  $("#scrim").classList.add("open");$("#modal").classList.add("sheet")}
 function subjOptions(sel,withAll){return (withAll?`<option value="All" ${sel==="All"?"selected":""}>All subjects</option>`:"")+subjects().map(s=>`<option ${s===sel?"selected":""}>${esc(s)}</option>`).join("")}
 function roNote(){return readOnly()?`<div class="banner on" style="border-color:var(--border);background:var(--surface-2)">You're viewing <b>@${esc(viewProfile&&viewProfile.username||"")}</b>'s logbook (read-only).</div>`:""}
 
@@ -239,7 +256,7 @@ function viewHome(){
    <div class="stat"><div class="k">Today</div><div class="v num">${t?H(t.m):"0.0"}<small>h</small></div><div class="d">${t?esc(Object.keys(t.s).join(", ")):"—"}</div></div>
    <div class="stat"><div class="k">This week</div><div class="v num">${H(wk)}<small>h</small></div><div class="d ${delta>=0?"delta-up":"delta-down"}">${delta>=0?"▲":"▼"} ${H(Math.abs(delta))} h vs last week</div></div>
   </div>
-  ${Report.homeBanner()}
+  ${readOnly()?"":Progress.rescue(streakInfo())}${Report.homeBanner()}
   <div class="grid g2 home-top">${todayCard()}${Quick.card()}</div>
   ${Goals.card()}${Social.homeCard()}
   <div class="card"><div class="head"><div><h2>Year in review</h2><p class="sub">Daily activity — hover or tap a day.</p></div>
@@ -282,13 +299,14 @@ function afterStats(){const el=$("#bars");if(el)barChart(el,rangeData(ui.statSub
 function logRow(l){const ro=readOnly();const sel=ui.sel;
   if(sel)return `<label class="log selrow ${sel.has(l.i)?"on":""}"><input type="checkbox" data-selid="${l.i}" ${sel.has(l.i)?"checked":""} aria-label="Select this log"><div class="main"><div class="act ${l.a?"":"empty"}">${l.a?esc(l.a):"No description"}</div><div class="meta">${srcChip(l)}${esc(l.s)} · ${esc(l.t)}</div></div><div class="min num">${l.m} min</div></label>`;
   return `<div class="log"><div class="main"><div class="act ${l.a?"":"empty"}">${l.a?esc(l.a):"No description"}</div><div class="meta">${srcChip(l)}${esc(l.s)} · ${esc(l.t)}${l.r&&Lib.titleOf(l.r)?` · <span class="rtag">${esc(Lib.titleOf(l.r))}</span>`:""}</div></div><div class="min num">${l.m} min</div>${ro?"":`<button class="ib" data-again="${l.i}" title="Log again today">${ICONS.again}</button><button class="ib" data-edit="${l.i}" title="Edit">${ICONS.edit}</button><button class="ib" data-del="${l.i}" title="Delete">${ICONS.del}</button>`}</div>`}
-function logTabs(){const t=ui.logTab||"logs";return `<div class="seg" style="margin-bottom:16px">${[["logs","Logs"],["res","Resources"],["scores","Scores"]].map(([k,l])=>`<button class="${k===t?"on":""}" data-logtab="${k}">${l}</button>`).join("")}</div>`}
+function logTabs(){const t=ui.logTab||"logs";return `<div class="seg" style="margin-bottom:16px">${[["logs","Logs"],["words","Words"],["res","Resources"],["scores","Scores"]].map(([k,l])=>`<button class="${k===t?"on":""}" data-logtab="${k}">${l}</button>`).join("")}</div>`}
 function srcSelect(){const labs=[...new Set(all().logs.map(l=>srcLabel(l.src)))];const o=(v,t)=>`<option value="${esc(v)}" ${ui.logSrc===v?"selected":""}>${esc(t)}</option>`;
   const auto=labs.filter(x=>isAuto({src:Object.keys(SRC_LABEL).find(k=>SRC_LABEL[k]===x)||x.toLowerCase()})).sort(),man=labs.filter(x=>!auto.includes(x)).sort();
   return `<select id="logSrc" aria-label="Added by">${o("All","All sources")}${o("manual","Added by me")}${o("auto","Automatic")}${auto.length?`<optgroup label="Automatic">${auto.map(x=>o("src:"+x,x)).join("")}</optgroup>`:""}${man.length>1?`<optgroup label="By me">${man.map(x=>o("src:"+x,x)).join("")}</optgroup>`:""}</select>`}
 function viewLogs(){
   if(ui.logTab==="res")return roNote()+`<h1>Resources</h1><p class="sub">Books, podcasts, series and courses — progress and hours.</p>`+logTabs()+Lib.viewRes();
   if(ui.logTab==="scores")return roNote()+`<h1>Scores</h1><p class="sub">Practice exams and tests over time.</p>`+logTabs()+Lib.viewScores();
+  if(ui.logTab==="words")return roNote()+`<h1>Words</h1><p class="sub">Words you saved while reading and watching, with where you met them.</p>`+logTabs()+Words.view();
   const q=ui.logQ.toLowerCase();const list=all().logs.filter(l=>(ui.logSubj==="All"||l.s===ui.logSubj)&&(ui.logType==="All"||l.t===ui.logType)&&srcMatch(l)&&(!q||(l.a||"").toLowerCase().includes(q)));
   const shown=list.slice(0,ui.logLimit);let html="",cur=null,dayTot={};for(const l of list)dayTot[l.d]=(dayTot[l.d]||0)+l.m;
   for(const l of shown){if(l.d!==cur){if(cur)html+="</div>";cur=l.d;html+=`<div class="day"><h3><span>${fmtDate(l.d)}</span><span class="num">${dur(dayTot[l.d])}</span></h3>`}html+=logRow(l)}
@@ -391,8 +409,8 @@ function viewAuth(){
    <form id="recForm"><div class="field"><label>New password</label><input type="password" id="newPw" minlength="8" required autocomplete="new-password"></div><button class="btn" style="width:100%">Save password</button></form><p class="sub" style="margin-top:12px">${esc(authMsg)}</p></div>`;
   if(phase==="username")return `<div class="card" style="max-width:420px;margin:40px auto"><h1>Pick a username</h1><p class="sub">Others use it to share with you. Lowercase letters, numbers and _ (3–20).</p>
    <form id="userForm"><div class="field"><input type="text" id="uname" pattern="[a-z0-9_]{3,20}" required autocapitalize="none" autocomplete="username"></div><button class="btn" style="width:100%">Continue</button></form><p class="sub" style="margin-top:12px;color:var(--danger)">${esc(authMsg)}</p></div>`;
-  const feats=[["⏱","Log any study time","Languages, aviation, code — by hand, with a stopwatch, or one tap."],["🎯","Goals that add up","Hours per skill, the pace you need, and whether you're on track."],["🌿","Calm focus mode","Pomodoro with paintings, gentle sounds and honest focus points."],["📈","Insights","Your best hours, weak skills, streaks and a weekly report."],["🧩","Automatic tracking","Anki and YouTube add their time for you."],["👥","Study together","Friends, live rooms and language communities."]];
-  return `<div class="landing"><div class="land-pitch"><div class="brand" style="padding:0 0 18px">LOG<b>BOOK</b></div><h1 class="land-h">Your study time,<br>on every device.</h1>
+  const feats=[["⏱","Log any study time","Languages, medicine, aviation, code — by hand, with a timer, or one tap."],["🧩","Counts itself","YouTube, Netflix, reading, writing, Spotify and Anki add their time for you."],["🧭","Levels you can feel","An estimated CEFR level per skill, tuned to the languages you already speak."],["🔥","Streaks that forgive","Freezes, make-up days, repairs — and friends who can save your streak."],["🛡️","Clans","Shared weekly goals, kudos and a team streak with the people you study with."],["🌿","Calm focus mode","Pomodoro with paintings and gentle sounds, plus coins for real focus."]];
+  return `<div class="landing"><div class="land-pitch"><span class="land-kicker">Free study tracker</span><h1 class="land-h">Every hour you study,<br>counted — and turned into progress.</h1>
      <p class="sub" style="font-size:15px">A free, calm tracker for everything you learn.</p>
      <div class="land-f">${feats.map(([i,t,d])=>`<div><span aria-hidden="true">${i}</span><b>${t}</b><small>${d}</small></div>`).join("")}</div></div>
    <div class="card land-card"><h2>Sign in</h2><p class="sub">Or create a free account.</p>
@@ -438,7 +456,7 @@ function readForm(){
   let s=$("#fS").value;if(s==="__other"){s=$("#fSo").value.trim();if(!s){toast("Type a subject name");return null}if(!(settings().subjects||[]).includes(s))saveSettings({subjects:[...(settings().subjects||[]),s]})}
   return {a:$("#fA").value.trim(),s,t:$("#fT").value};
 }
-function closeModal(){$("#scrim").classList.remove("open");modalState=null}
+function closeModal(){$("#scrim").classList.remove("open");$("#modal").classList.remove("sheet");modalState=null}
 function elapsedMs(t){return (t.acc||0)+(t.running?Date.now()-t.start:0)}
 function clockText(ms){ms=Math.max(0,ms);const s=Math.floor(ms/1000);return pad(Math.floor(s/3600))+":"+pad(Math.floor(s/60)%60)+":"+pad(s%60)}
 let beeped=false,actx=null;
@@ -479,6 +497,7 @@ document.addEventListener("click",async e=>{
   if(a.dataset.deltok){if(!a.classList.contains("confirm")){a.classList.add("confirm");a.textContent="Delete?";return}const {error}=await sb.from("ingest_tokens").delete().eq("token",a.dataset.deltok);if(error)return fail(error);await loadTokens();render();toast("Connection removed");return}
   const act=a.dataset.act;
   if(act==="close")closeModal();
+  else if(act==="more")moreSheet();
   else if(act==="theme"){const i=THEMES.findIndex(t=>t[0]===curTheme());const nx=THEMES[(i+1)%THEMES.length];setTheme(nx[0]);toast("Theme: "+nx[1])}
   else if(act==="setTheme"){setTheme(a.dataset.theme)}
   else if(act==="saveManual"){const f=readForm();if(!f)return;const m=parseInt($("#fM").value,10),d=$("#fD").value;if(!(m>0&&m<=1440)||!/^\d{4}-\d{2}-\d{2}$/.test(d))return toast("Check date and minutes (1–1440)");
@@ -559,7 +578,7 @@ document.addEventListener("change",e=>{
   else if(id==="csvFile"&&e.target.files[0]){const f=e.target.files[0];e.target.value="";handleCSV(f)}
 });
 let qT;document.addEventListener("input",e=>{if(e.target.id==="logQ"){ui.logQ=e.target.value;clearTimeout(qT);qT=setTimeout(()=>{render();const i=$("#logQ");if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}},250)}});
-addEventListener("hashchange",()=>{window.scrollTo(0,0);render()});
+addEventListener("hashchange",()=>{const go=()=>{window.scrollTo(0,0);render()};if(document.startViewTransition&&!reduceMotion()&&phase==="app"&&!document.body.classList.contains("immersive"))document.startViewTransition(go);else go()});
 let rT;addEventListener("resize",()=>{clearTimeout(rT);rT=setTimeout(()=>{if(phase==="app"&&route()==="stats")afterStats();if(phase==="app"&&route()==="insights")Insights.after()},150)});
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(phase!=="app")return;if(document.hidden){hiddenAt=Date.now();return}loadTimer();if(Date.now()-hiddenAt>30000)refresh()});
@@ -567,7 +586,7 @@ setInterval(()=>{if(phase==="app"&&!document.hidden)loadTimer()},20000);
 
 /* ============ boot ============ */
 async function switchView(id){
-  viewing=id;ui.statSubj=null;ui.hmSubj="All";ui.logSubj="All";ui.logSrc="All";logsArr=[];invalidate();
+  viewing=id;ui.statSubj=null;ui.hmSubj="All";ui.logSubj="All";ui.logSrc="All";logsArr=[];invalidate();Words.reset();
   viewProfile=id===me?myProfile:(await loadProfile(id))||{username:"?",subjects:[],types:[]};
   $("#view").innerHTML='<div class="empty-state">Loading…</div>';renderNav();renderBanner();
   try{await Promise.all([loadLogs(),Lib.load(id)])}catch(e){fail(e,"Couldn't load that logbook")}render();
@@ -617,7 +636,7 @@ async function startApp(){
   if(Net.bootOffline){render();launchAction();return}
   sb.auth.getUser().then(r=>{if(r.data&&r.data.user){ui.email=r.data.user.email;if(route()==="manage")render()}}).catch(()=>{});
   await Promise.all([loadLogs().catch(e=>{if(c)Net.markOffline();else fail(e,"Couldn't load your logs")}),Lib.load(me).catch(console.warn),loadShares().catch(console.error),loadTokens().catch(()=>{}),loadTimer().catch(()=>{})]);
-  render();Social.start();FocusSync.start();Net.flush();launchAction();Spotify.launch();
+  render();Social.start();FocusSync.start();Net.flush();launchAction();Spotify.launch();Rewards.load();Clans.launch();
 }
 async function afterLogin(){
   const p=await loadProfile(me).catch(e=>{const c=Cache.load(me);if(c&&c.profile)return c.profile;fail(e);return null});
@@ -627,14 +646,15 @@ async function afterLogin(){
 function render(){
   renderNav();const v=$("#view");
   if(phase==="boot"){v.innerHTML=skeleton();return}
+  document.body.classList.toggle("signed-out",phase!=="app"&&phase!=="boot");
   if(phase!=="app"){document.body.classList.remove("immersive");v.innerHTML=viewAuth();renderBanner();Captcha.mount();return}
   const r=route();
   if(r==="focus"&&typeof Focus!=="undefined"){document.body.classList.add("immersive");Focus.render(v);return}
   document.body.classList.remove("immersive");if(typeof Focus!=="undefined"){Focus.unmount();Focus.paint(false)}
   if(r==="manage"&&$((importState&&importState.box)||"#importBox")&&importState&&!importState.done){renderImportBox();return}
   if(r!=="logs"&&ui.sel)ui.sel=null;
-  v.innerHTML=r==="stats"?viewStats():r==="logs"?viewLogs():r==="manage"?viewManage():r==="insights"?Insights.view():r==="friends"?Social.view():viewHome();
-  if(r==="home")afterHome();if(r==="stats")afterStats();if(r==="manage")renderImportBox();if(r==="insights")Insights.after();
+  v.innerHTML=r==="stats"?viewStats():r==="logs"?viewLogs():r==="manage"?viewManage():r==="insights"?Insights.view():r==="friends"?Social.view():r==="progress"?Progress.view():viewHome();
+  if(r==="home")afterHome();if(r==="stats")afterStats();if(r==="manage")renderImportBox();if(r==="insights")Insights.after();if(r==="progress")Progress.after();
   if(r==="logs"){watchMore();Lib.after()}
   v.querySelectorAll("button[title]:not([aria-label])").forEach(b=>b.setAttribute("aria-label",b.title));Net.paint();
 }
@@ -656,7 +676,7 @@ setTheme(curTheme(),true);
   sb.auth.onAuthStateChange((event,session)=>{
     setTimeout(async()=>{
       if(event==="PASSWORD_RECOVERY"){recovering=true;me=session.user.id;phase="recovery";authMsg="";return render()}
-      if(event==="SIGNED_OUT"){Social.stop();Lib.reset();Spotify.reset();AnkiStats.reset();ui.sel=null;me=null;myProfile=null;viewing=null;logsArr=[];timer=null;invalidate();phase="auth";authMsg="";return render()}
+      if(event==="SIGNED_OUT"){Social.stop();Lib.reset();Spotify.reset();AnkiStats.reset();Rewards.reset();Words.reset();Clans.reset();ui.sel=null;me=null;myProfile=null;viewing=null;logsArr=[];timer=null;invalidate();phase="auth";authMsg="";return render()}
       if((event==="SIGNED_IN"||event==="TOKEN_REFRESHED")&&session&&Net.bootOffline){Net.setBootOffline(false);me=session.user.id;return startApp()}
       if(event==="SIGNED_IN"&&session&&!recovering&&me!==session.user.id){me=session.user.id;await afterLogin()}
     },0);

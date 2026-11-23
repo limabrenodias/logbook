@@ -1,7 +1,7 @@
 /* In-browser stand-in for Supabase used by the tests: tables live in localStorage, auth in sessionStorage,
    realtime over BroadcastChannel. Set localStorage 'mock-offline' to '1' to simulate no connection. */
 (()=>{
-const EMPTY='{"profiles":[],"logs":[],"timers":[],"shares":[],"ingest_tokens":[],"users":[],"friendships":[],"reactions":[],"presence":[],"focus_sessions":[],"focus_awards":[],"resources":[],"scores":[],"client_errors":[],"blocks":[],"room_members":[],"anki_stats":[]}';
+const EMPTY='{"profiles":[],"logs":[],"timers":[],"shares":[],"ingest_tokens":[],"users":[],"friendships":[],"reactions":[],"presence":[],"focus_sessions":[],"focus_awards":[],"resources":[],"scores":[],"client_errors":[],"blocks":[],"room_members":[],"anki_stats":[],"words":[],"streak_saves":[],"clans":[],"clan_members":[],"clan_kudos":[]}';
 let DB;const ld=()=>{DB=JSON.parse(localStorage.getItem('mockdb')||EMPTY);for(const k of Object.keys(JSON.parse(EMPTY)))DB[k]=DB[k]||[]};ld();
 const save=()=>localStorage.setItem('mockdb',JSON.stringify(DB));
 let session=JSON.parse(sessionStorage.getItem('mocksess')||'null');const subs=[];
@@ -20,12 +20,12 @@ class Q{constructor(t){this.t=t;this.f=[];this.op='select';this.ord=[];}
   const T=DB[this.t];const uid=uidf();let out;
   if(this.op==='insert'){const pk=this.t==='logs'?(r=>r.id):this.t==='focus_sessions'?(r=>uidf()+'|'+r.id):this.t==='focus_awards'?(r=>uidf()+'|'+r.t):null;
    if(pk){const have=new Set(T.map(x=>this.t==='logs'?x.id:x.user_id+'|'+(x.id??x.t)));if(this.rows.some(r=>r.id&&have.has(pk(r))||(this.t!=='logs'&&have.has(pk(r)))))return{data:null,error:{code:'23505',message:'duplicate key'}}}
-   out=this.rows.map(r=>{const x={...r};if(this.t==='logs'){x.id=x.id||uuid();x.user_id=uid;x.created_at=x.created_at||new Date().toISOString()}if(['focus_sessions','focus_awards','resources','scores','client_errors','blocks'].includes(this.t)){x.user_id=x.user_id||uid;if(this.t!=='focus_sessions'&&this.t!=='focus_awards'&&this.t!=='client_errors'&&this.t!=='blocks')x.id=x.id||uuid()}if(this.t==='ingest_tokens'){x.token=uuid().replace(/-/g,'');x.created_at=new Date().toISOString()}
+   out=this.rows.map(r=>{const x={...r};if(this.t==='logs'){x.id=x.id||uuid();x.user_id=uid;x.created_at=x.created_at||new Date().toISOString()}if(this.t==='words'){x.id=x.id||uuid();x.user_id=uid;x.created_at=new Date().toISOString();x.status=x.status||'new';x.seen=1;x.sentence=x.sentence||'';x.source=x.source||'';x.url=x.url||''}if(['focus_sessions','focus_awards','resources','scores','client_errors','blocks'].includes(this.t)){x.user_id=x.user_id||uid;if(this.t!=='focus_sessions'&&this.t!=='focus_awards'&&this.t!=='client_errors'&&this.t!=='blocks')x.id=x.id||uuid()}if(this.t==='ingest_tokens'){x.token=uuid().replace(/-/g,'');x.created_at=new Date().toISOString()}
      if(this.t==='shares'&&T.some(s=>s.owner===x.owner&&s.viewer===x.viewer))throw 0;T.push(x);return x});save();}
   else if(this.op==='upsert'){const r=this.rows[0];const key=(this.t==='timers'||this.t==='presence')?'user_id':'id';
      if(this.t==='profiles'&&T.some(p=>p.username===r.username&&p.id!==r.id)){return{data:null,error:{code:'23505',message:'dup'}}}
      if(this.t==='profiles'&&['admin','administrator','root','support','help','logbook','system','moderator','mod','staff','official','security','api','www','mail','null','undefined','anonymous','team','owner'].includes(r.username))return{data:null,error:{code:'23514',message:'That username is reserved'}};
-     const i=T.findIndex(x=>x[key]===r[key]);if(i>=0)T[i]={...T[i],...r};else T.push(this.t==='profiles'?{subjects:[],types:[],prefs:{},...r}:{...r});save();out=[r]}
+     if(this.t==='words'){r.user_id=uid;r.id=r.id||uuid();r.created_at=r.created_at||new Date().toISOString();r.status=r.status||'new';r.seen=r.seen||1}const i=this.t==='words'?T.findIndex(x=>x.user_id===r.user_id&&x.lang===r.lang&&x.word===r.word):T.findIndex(x=>x[key]===r[key]);if(i>=0)T[i]={...T[i],...r};else T.push(this.t==='profiles'?{subjects:[],types:[],prefs:{},...r}:{...r});save();out=[r]}
   else if(this.op==='update'){out=T.filter(r=>this.f.every(f=>f(r)));out.forEach(r=>Object.assign(r,this.patch));save()}
   else if(this.op==='delete'){out=T.filter(r=>this.f.every(f=>f(r)));const keep=T.filter(r=>!this.f.every(f=>f(r)));DB[this.t]=keep;save()}
   else{out=T.filter(r=>this.f.every(f=>f(r)));
@@ -44,7 +44,28 @@ const P=id=>DB.profiles.find(p=>p.id===id)||{};
 const isF=(a,b)=>DB.friendships.some(f=>f.status==='accepted'&&((f.requester===a&&f.addressee===b)||(f.requester===b&&f.addressee===a)));
 const fresh=p=>p&&Date.now()-Date.parse(p.updated_at)<180000;
 const addD=(s,n)=>{const d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
+const _ws=t=>{const d=new Date(t+'T12:00:00');d.setDate(d.getDate()-((d.getDay()+6)%7));return d.toISOString().slice(0,10)};
+const _cm=(c,u,a,b)=>DB.logs.filter(l=>l.user_id===u&&l.d>=a&&l.d<=b&&(!c.subject||l.subject===c.subject)).reduce((s,l)=>s+l.minutes,0);
 const RPC={
+ my_social_rewards(){const me=uidf();return {periods:[],kudos:(DB.clan_kudos||[]).filter(k=>k.to_user===me).length}},
+ friends_to_save(){return []},
+ streak_save(){return null},
+ my_clans(a){const me=uidf();DB.clans=DB.clans||[];DB.clan_members=DB.clan_members||[];const ws=_ws(a.p_today),ms=a.p_today.slice(0,8)+'01';
+   return DB.clan_members.filter(m=>m.user_id===me).map(m=>{const c=DB.clans.find(x=>x.id===m.clan_id);const mem=DB.clan_members.filter(x=>x.clan_id===c.id);
+     return {id:c.id,name:c.name,tag:c.tag,about:c.about,subject:c.subject,code:c.code,role:m.role,members:mem.length,weekly_goal:c.weekly_goal,week_min:mem.reduce((s,x)=>s+_cm(c,x.user_id,ws,a.p_today),0),monthly_goal:c.monthly_goal,month_min:mem.reduce((s,x)=>s+_cm(c,x.user_id,ms,a.p_today),0)}})},
+ clan_create(a){const me=uidf();DB.clans=DB.clans||[];DB.clan_members=DB.clan_members||[];const id=uuid();DB.clans.push({id,name:a.p_name,tag:a.p_tag,about:a.p_about||'',subject:a.p_subject||null,code:Math.random().toString(36).slice(2,10).toUpperCase().padEnd(8,'X'),weekly_goal:a.p_weekly,monthly_goal:a.p_monthly});DB.clan_members.push({clan_id:id,user_id:me,role:'owner',joined_at:new Date().toISOString()});return id},
+ clan_join(a){const me=uidf();const c=(DB.clans||[]).find(x=>x.code===a.p_code);if(!c)throw {message:'No clan with that code'};if(!DB.clan_members.some(m=>m.clan_id===c.id&&m.user_id===me))DB.clan_members.push({clan_id:c.id,user_id:me,role:'member',joined_at:new Date().toISOString()});return c.id},
+ clan_leave(a){const me=uidf();DB.clan_members=DB.clan_members.filter(m=>!(m.clan_id===a.p_clan&&m.user_id===me));if(!DB.clan_members.some(m=>m.clan_id===a.p_clan))DB.clans=DB.clans.filter(c=>c.id!==a.p_clan);else if(!DB.clan_members.some(m=>m.clan_id===a.p_clan&&m.role==='owner'))DB.clan_members.find(m=>m.clan_id===a.p_clan).role='owner';return null},
+ clan_update(a){const c=DB.clans.find(x=>x.id===a.p_clan);Object.assign(c,{name:a.p_name,tag:a.p_tag,about:a.p_about,subject:a.p_subject||null,weekly_goal:a.p_weekly,monthly_goal:a.p_monthly});return null},
+ clan_new_code(a){const c=DB.clans.find(x=>x.id===a.p_clan);c.code=Math.random().toString(36).slice(2,10).toUpperCase().padEnd(8,'X');return c.code},
+ clan_kick(a){DB.clan_members=DB.clan_members.filter(m=>!(m.clan_id===a.p_clan&&m.user_id===a.p_user));return null},
+ clan_kudos_give(a){const me=uidf();DB.clan_kudos=DB.clan_kudos||[];if(a.p_to===me)throw {message:'not allowed'};if(!DB.clan_kudos.some(k=>k.clan_id===a.p_clan&&k.from_user===me&&k.to_user===a.p_to&&k.d===a.p_today))DB.clan_kudos.push({clan_id:a.p_clan,from_user:me,to_user:a.p_to,d:a.p_today});return null},
+ clan_detail(a){const me=uidf();const c=DB.clans.find(x=>x.id===a.p_clan);if(!c||!DB.clan_members.some(m=>m.clan_id===c.id&&m.user_id===me))throw {message:'not a member'};const t=a.p_today,ws=_ws(t),ms=t.slice(0,8)+'01';const mem=DB.clan_members.filter(m=>m.clan_id===c.id);
+   const add=(d,n)=>{const x=new Date(d+'T12:00:00');x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
+   const weeks=[];for(let i=11;i>=0;i--){const s=add(ws,-7*i),e=add(s,6);weeks.push({start:s,total:mem.reduce((q,m)=>q+_cm(c,m.user_id,s,e),0),mine:_cm(c,me,s,e)})}
+   const months=[];for(let i=5;i>=0;i--){const d=new Date(ms+'T12:00:00');d.setMonth(d.getMonth()-i);const s=d.toISOString().slice(0,8)+'01';const e2=new Date(d.getFullYear(),d.getMonth()+1,0);const e=e2.getFullYear()+'-'+String(e2.getMonth()+1).padStart(2,'0')+'-'+String(e2.getDate()).padStart(2,'0');months.push({start:s,total:mem.reduce((q,m)=>q+_cm(c,m.user_id,s,e),0),mine:_cm(c,me,s,e)})}
+   return {...c,me,owner:mem.some(m=>m.user_id===me&&m.role==='owner'),weeks,months,members:mem.map(m=>({id:m.user_id,username:(DB.profiles.find(p=>p.id===m.user_id)||{}).username||'?',role:m.role,today:_cm(c,m.user_id,t,t),week:_cm(c,m.user_id,ws,t),month:_cm(c,m.user_id,ms,t),
+     kudos_week:(DB.clan_kudos||[]).filter(k=>k.clan_id===c.id&&k.to_user===m.user_id&&k.d>=ws).length,kudos_from_me:(DB.clan_kudos||[]).some(k=>k.clan_id===c.id&&k.to_user===m.user_id&&k.from_user===me&&k.d===t)})).sort((x,y)=>y.week-x.week)}},
  spotify_status(){return {connected:false}},
  delete_my_account(){const me=uidf();for(const t of ['logs','profiles','friendships','presence','focus_sessions','focus_awards','ingest_tokens'])DB[t]=DB[t].filter(r=>![r.user_id,r.id,r.requester,r.addressee].includes(me));DB.users=DB.users.filter(u=>u.id!==me);save();return null},
  find_user:a=>(DB.profiles.find(p=>p.username===a.p_username)||{}).id||null,
@@ -68,7 +89,7 @@ const RPC={
    arr.forEach((r,i)=>r.rank=i&&arr[i-1].minutes===r.minutes?arr[i-1].rank:i+1);const v=arr.map(r=>r.minutes).sort((x,y)=>x-y);const med=v.length?(v.length%2?v[(v.length-1)/2]:(v[v.length/2-1]+v[v.length/2])/2):0;const mine=arr.find(r=>r.id===me);
    return {members:arr.length,total_min:v.reduce((x,y)=>x+y,0),median_min:med,top:arr.slice(0,20).map(r=>({username:r.username,minutes:r.minutes,rank:r.rank,me:r.id===me})),me:mine?{minutes:mine.minutes,rank:mine.rank}:null,by_type:bt,now:DB.presence.filter(p=>p.subject===a.p_subject&&p.state==='focus'&&fresh(p)&&opt(p.user_id)).length}}
 };
-async function rpc(n,a){ld();if(NOPRESENCE&&n!=='find_user')return{data:null,error:{code:'PGRST202',message:'Could not find the function'}};if(!RPC[n])return{data:null,error:{message:'?'}};try{return{data:RPC[n](a||{}),error:null}}catch(e){return{data:null,error:e}}}
+async function rpc(n,a){ld();if(NOPRESENCE&&n!=='find_user')return{data:null,error:{code:'PGRST202',message:'Could not find the function'}};if(!RPC[n])return{data:null,error:{message:'?'}};try{const d=RPC[n](a||{});save();return{data:d,error:null}}catch(e){return{data:null,error:e}}}
 /* ---- realtime: presence + broadcast over BroadcastChannel (same browser) ---- */
 function channel(name,opts){const key=(opts&&opts.config&&opts.config.presence&&opts.config.presence.key)||uuid();const bc=new BroadcastChannel('rt-'+name);const H={presence:[],broadcast:{}};let state={},mine=null;
  const sync=()=>H.presence.forEach(cb=>cb());

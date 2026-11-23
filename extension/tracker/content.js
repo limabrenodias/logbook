@@ -6,12 +6,13 @@
 //     in the last N seconds, and the page has real text
 // Languages are detected here, on your computer, with Brave/Chrome's built-in detector.
 // No page text ever leaves your computer — only the site, the title and the minutes are sent.
+// The one exception is a word you save yourself (Alt+click, or select + Alt+W): that word and its sentence are sent.
 (() => {
   if (window.top !== window) return;
   const HOST = location.hostname.replace(/^www\./, "");
   const day = (d = new Date()) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-  let S = { readIdle: 45, track: { media: true, read: true, write: true } };
-  const loadSettings = () => { try { chrome.storage.local.get("settings", r => { const s = r.settings || {}; S = { readIdle: s.readIdle || 45, track: { media: true, read: true, write: true, ...(s.track || {}) } }; }); } catch (_) {} };
+  let S = { readIdle: 45, track: { media: true, read: true, write: true }, words: true };
+  const loadSettings = () => { try { chrome.storage.local.get("settings", r => { const s = r.settings || {}; S = { readIdle: s.readIdle || 45, track: { media: true, read: true, write: true, ...(s.track || {}) }, words: s.words !== false }; }); } catch (_) {} };
   loadSettings(); try { chrome.storage.onChanged.addListener(c => { if (c.settings) loadSettings(); }); } catch (_) {}
 
   /* ---------- language detection (local) ---------- */
@@ -144,4 +145,60 @@
   let lastUrl = location.href;
   setInterval(() => { if (location.href !== lastUrl) { lastUrl = location.href; page.at = 0; setTimeout(() => checkPage(true), 1500); } }, 1000);
   setTimeout(() => checkPage(true), 1500);
+
+  /* ---------- save a word: Alt+click it, or select a word or phrase and press Alt+W ---------- */
+  let lastMediaLang = "";
+  setInterval(() => { const v = playingMedia(); if (v) { const m = mediaInfo(v); if (m && m.lang) lastMediaLang = m.lang; } }, 4000);
+  const seg = (g) => { try { return new Intl.Segmenter(undefined, { granularity: g }); } catch (_) { return null; } };
+  function caretAt(x, y) {
+    if (document.caretPositionFromPoint) { const p = document.caretPositionFromPoint(x, y); if (p) return { node: p.offsetNode, off: p.offset }; }
+    if (document.caretRangeFromPoint) { const r = document.caretRangeFromPoint(x, y); if (r) return { node: r.startContainer, off: r.startOffset }; }
+    return null;
+  }
+  function wordAt(x, y) {
+    const c = caretAt(x, y); if (!c || !c.node || c.node.nodeType !== 3) return null;
+    const text = c.node.data; const ws = seg("word");
+    if (ws) { for (const w of ws.segment(text)) if (w.isWordLike && c.off >= w.index && c.off <= w.index + w.segment.length) return { word: w.segment, el: c.node.parentElement }; return null; }
+    const m = /[\p{L}\p{M}'’-]+/gu; let r; while ((r = m.exec(text))) if (c.off >= r.index && c.off <= r.index + r[0].length) return { word: r[0], el: c.node.parentElement };
+    return null;
+  }
+  function sentenceOf(el, word) {
+    let box = el; while (box && box.parentElement && (box.innerText || "").length < 40 && box !== document.body) box = box.parentElement;
+    const text = ((box && box.innerText) || "").replace(/\s+/g, " ").trim().slice(0, 4000);
+    const ss = seg("sentence"); const lw = word.toLowerCase();
+    if (ss) for (const x of ss.segment(text)) if (x.segment.toLowerCase().includes(lw)) return x.segment.trim().slice(0, 500);
+    const i = text.toLowerCase().indexOf(lw); return i < 0 ? "" : text.slice(Math.max(0, i - 160), i + lw.length + 160).trim();
+  }
+  let tip = null;
+  function feedback(x, y, msg, ok) {
+    if (!tip) { tip = document.createElement("div"); const sh = tip.attachShadow({ mode: "closed" }); tip._sh = sh; document.documentElement.appendChild(tip); }
+    tip._sh.innerHTML = `<style>div{position:fixed;z-index:2147483647;font:600 13px/1.3 system-ui,sans-serif;padding:8px 12px;border-radius:999px;color:#fff;
+      background:${ok ? "#1f7a4d" : "#7a2e2e"};box-shadow:0 8px 24px rgba(0,0,0,.3);pointer-events:none;transition:opacity .3s;max-width:320px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}</style><div></div>`;
+    const d = tip._sh.querySelector("div"); d.textContent = msg; d.style.left = Math.min(innerWidth - 330, Math.max(8, x + 12)) + "px"; d.style.top = Math.max(8, y - 44) + "px";
+    clearTimeout(tip._t); tip._t = setTimeout(() => { d.style.opacity = "0"; }, 1800);
+  }
+  async function saveWord(word, el, x, y) {
+    word = (word || "").replace(/^[\s"'“”«»(\[]+|[\s"'“”«».,;:!?)\]]+$/g, "").slice(0, 80);
+    if (!word || !alive) return;
+    const sentence = el ? sentenceOf(el, word) : "";
+    const inPlayer = el && el.closest && el.closest(".html5-video-player, .watch-video, [class*='player' i]");
+    const r = sentence.length >= 40 ? await detect(sentence) : null;
+    await checkPage(false);
+    const code = (r && r.code) || (inPlayer && lastMediaLang) || page.lang || "";
+    const item = { code, word, sentence, source: (document.title || HOST).slice(0, 200), url: location.href.slice(0, 500) };
+    try { chrome.runtime.sendMessage({ type: "word", item }, res => { const lang = res && res.lang; feedback(x, y, lang ? `Saved “${word}” · ${lang}` : `Saved “${word}”`, true); }); }
+    catch (_) { alive = false; feedback(x, y, "Reload the page to save words", false); }
+  }
+  addEventListener("click", e => {
+    if (!S.words || !e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+    const w = wordAt(e.clientX, e.clientY); if (!w) return;
+    e.preventDefault(); e.stopPropagation(); saveWord(w.word, w.el, e.clientX, e.clientY);
+  }, true);
+  addEventListener("keydown", e => {
+    if (!S.words || !e.altKey || e.ctrlKey || e.metaKey || (e.code !== "KeyW")) return;
+    const sel = getSelection(); const t = sel && sel.toString().trim(); if (!t || t.length > 80) return;
+    e.preventDefault(); const rr = sel.rangeCount ? sel.getRangeAt(0).getBoundingClientRect() : { left: 20, top: 60 };
+    const el = sel.anchorNode && (sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode);
+    saveWord(t, el, rr.left, rr.top);
+  }, true);
 })();

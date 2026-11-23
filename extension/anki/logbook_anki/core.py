@@ -157,3 +157,37 @@ def fetch_lists(token: str, timeout: int = 8):
     return {"username": j.get("username") or "", "subjects": [s for s in (j.get("subjects") or []) if s][:80],
             "types": [t for t in (j.get("types") or []) if t][:60]}
 
+
+def _rpc(name: str, payload: dict, timeout: int = 15):
+    req = urllib.request.Request(SB_URL + "/rest/v1/rpc/" + name, data=json.dumps(payload).encode(), method="POST",
+                                 headers={"Content-Type": "application/json", "apikey": SB_KEY})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode("utf-8") or "null")
+
+
+def fetch_words(token: str):
+    """Words saved in Logbook that aren't in Anki yet (needs database update 7). None if not available."""
+    try:
+        rows = _rpc("token_words", {"p_token": token})
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None
+        raise RuntimeError(f"Logbook answered {e.code} for saved words")
+    return rows if isinstance(rows, list) else []
+
+
+def mark_words(token: str, ids: list):
+    if not ids:
+        return 0
+    return _rpc("words_mark_anki", {"p_token": token, "p_ids": ids[:500]})
+
+
+def sentence_html(sentence: str, word: str) -> str:
+    """The sentence with the saved word in bold (HTML-escaped)."""
+    import html, re
+    s = html.escape(sentence or "")
+    w = html.escape(word or "")
+    if not w:
+        return s
+    return re.sub("(" + re.escape(w) + ")", r"<b>\1</b>", s, count=1, flags=re.IGNORECASE)
+

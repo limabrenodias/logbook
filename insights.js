@@ -91,11 +91,12 @@ const Insights={
      ${L.map(g=>{const S=Goals.stats(g);return `<div class="ins-goal"><b>${esc(g.name)}</b><span class="pill pill-${S.status}">${ST_TXT[S.status]}</span><span class="muted">${S.status==="done"?"Completed":S.eta?`finish ≈ ${esc(shortDate(S.eta))} · deadline ${esc(shortDate(g.deadline))}`:`deadline ${esc(shortDate(g.deadline))}`}</span></div>`}).join("")}</div>`;
   },
   view(){
-    if(ui.insView==="year")return Report.yearView();
+    if(ui.insView==="recap")return Recap.view();
+    if(ui.insView==="year"){ui.insView="recap";ui.rcKind="year";ui.rcAt=(ui.yr?ui.yr+"-06-01":Recap.defaultAnchor("year"));return Recap.view()}
     const c=all();
     if(!c.logs.length)return roNote()+`<h1>Insights</h1><div class="card empty-state">Log a few sessions and patterns will show up here.</div>`;
     if(!ui.insSubj)ui.insSubj=focus();const s=ui.insSubj;
-    return roNote()+`<div class="row" style="align-items:flex-start"><div style="flex:1"><h1>Insights</h1><p class="sub">Patterns in how you study — what's working and what's slipping.</p></div><button class="btn sec" data-yropen>Year in review</button></div>
+    return roNote()+`<div class="row" style="align-items:flex-start"><div style="flex:1"><h1>Insights</h1><p class="sub">Patterns in how you study — what's working and what's slipping. Recaps:</p></div><div class="row"><button class="btn sec" data-rcopen="week">Week</button><button class="btn sec" data-rcopen="month">Month</button><button class="btn sec" data-rcopen="year">Year</button></div></div>
       ${Report.card()}${this.headlines()}${this.goals()}
       <div class="row" style="margin:6px 0 14px"><h2 style="margin:0">By subject</h2><span class="spacer"></span><select id="insSubj">${subjOptions(s,true)}</select></div>
       <div class="grid g2">${this.balance(s)}${this.weekday(s)}</div>
@@ -103,6 +104,6 @@ const Insights={
       <div class="grid g2">${this.momentum()}${this.milestones()}</div>
       ${AnkiStats.card()}`;
   },
-  after(){Report.after();const a=$("#insWd");if(a&&this._wd)barChart(a,this._wd);const b=$("#insHr");if(b&&this._hr)barChart(b,this._hr)}
+  after(){Report.after();Recap.after();const a=$("#insWd");if(a&&this._wd)barChart(a,this._wd);const b=$("#insHr");if(b&&this._hr)barChart(b,this._hr)}
 };
 document.addEventListener("change",e=>{if(e.target.id==="insSubj"){ui.insSubj=e.target.value;render()}});

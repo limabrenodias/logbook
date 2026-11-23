@@ -6,6 +6,6 @@ const CONFIG = {
   // Cloudflare Turnstile site key — turns on the "I'm human" check on sign-up / sign-in / password reset.
   // Leave empty until you've enabled CAPTCHA in Supabase (Authentication → Attack Protection).
   turnstileSiteKey: "",
-  version: "2026.11.23",
+  version: "2026.11.24",
   contactEmail: ""   // shown on the privacy page; fill in before going public
 };

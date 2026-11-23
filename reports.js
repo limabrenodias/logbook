@@ -35,7 +35,7 @@ const Report=(()=>{
     const W=weekly();if(!W.tot&&!W.ptot)return "";
     return `<div class="card wr"><div class="head"><div><h2>Weekly report</h2><p class="sub">${esc(shortDate(W.a))} – ${esc(shortDate(W.b))}</p></div></div>
       <div class="wr-grid"><div><div class="k">Studied</div><div class="v num">${H(W.tot)} h</div></div><div><div class="k">Active days</div><div class="v num">${W.days} / 7</div></div>
-       <div><div class="k">Focus sessions</div><div class="v num">${W.focus}</div></div><div><div class="k">Focus points</div><div class="v num">${W.points}</div></div></div>
+       <div><div class="k">Focus sessions</div><div class="v num">${W.focus}</div></div><div><div class="k">Focus coins</div><div class="v num">${W.points}</div></div></div>
       ${W.subs.length?ratioBars(W.subs):""}
       ${W.say.length?`<ul>${W.say.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}</div>`;
   }
@@ -44,6 +44,9 @@ const Report=(()=>{
     const m=d.getMonth(),day=d.getDate();
     if((m===11&&day>=15)||(m===0&&day<=15)){const y=m===0?d.getFullYear()-1:d.getFullYear();let ys="";try{ys=localStorage.getItem("lb-yr-seen")||""}catch(_){}
       if(ys!==String(y)&&all().logs.some(l=>l.d.startsWith(String(y))))return `<div class="card wr home-banner"><div><b>Your ${y} in review is ready ✨</b><div class="sub" style="margin:2px 0 0">Hours, streaks, favourite resources and more.</div></div><div class="row"><button class="btn" data-yr="${y}">Open</button><button class="ib" data-yrhide="${y}" aria-label="Dismiss">×</button></div></div>`}
+    if(day<=5){const pm=new Date(d.getFullYear(),d.getMonth()-1,1);const mk=ymd(pm).slice(0,7);let ms="";try{ms=localStorage.getItem("lb-mo-seen")||""}catch(_){}
+      if(ms!==mk&&all().logs.some(l=>l.d.startsWith(mk))){const mt=all().logs.filter(l=>l.d.startsWith(mk)).reduce((a,l)=>a+l.m,0);
+        return `<div class="card wr home-banner"><div><b>Your ${pm.toLocaleDateString(undefined,{month:"long"})} recap is ready</b><div class="sub" style="margin:2px 0 0">${H(mt)} h across the month — with a picture to share.</div></div><div class="row"><button class="btn" data-mo="${mk}">See it</button><button class="ib" data-mohide="${mk}" aria-label="Hide" title="Hide">×</button></div></div>`}}
     if(d.getDay()>=1&&d.getDay()<=3&&seen!==weekKey()){const W=weekly();if(!W.tot)return "";
       return `<div class="card wr home-banner"><div><b>Your weekly report is ready</b><div class="sub" style="margin:2px 0 0">${H(W.tot)} h last week${W.ptot?` · ${W.tot>=W.ptot?"▲":"▼"} vs the week before`:""}</div></div><div class="row"><button class="btn" data-wr>See it</button><button class="ib" data-wrhide aria-label="Dismiss">×</button></div></div>`}
     return "";
@@ -69,7 +72,7 @@ const Report=(()=>{
      <div class="yr-cards">
       ${card("Longest streak",best+" days")}${card("Best day",dur(bestDay[1]),esc(fmtDate(bestDay[0])))}
       ${card("Busiest month",MONTHS[bm],dur(months[bm]))}${card("Favourite day",W[wd.indexOf(Math.max(...wd))])}
-      ${card("Average on a study day",dur(Math.round(tot/dk.length)))}${f.length?card("Focus sessions",f.length,`${H(sum(f,x=>x.min||0))} h · ${sum(P,h=>h.total||0)} points`):""}
+      ${card("Average on a study day",dur(Math.round(tot/dk.length)))}${f.length?card("Focus sessions",f.length,`${H(sum(f,x=>x.min||0))} h · ${sum(P,h=>h.total||0)} coins`):""}
      </div>
      <div class="grid g2" style="margin-top:12px"><div class="card"><h2>Subjects</h2>${ratioBars(bySubject(L).slice(0,6))}</div>
       <div class="card"><h2>Month by month</h2><div class="chart" id="yrMonths"></div></div></div>
@@ -84,10 +87,12 @@ const Report=(()=>{
   }
   function after(){const el=$("#yrMonths");if(el&&ui._yrMonths)barChart(el,ui._yrMonths)}
   document.addEventListener("click",e=>{
-    const t=e.target.closest("[data-wr],[data-wrhide],[data-yr],[data-yrhide],[data-insback],[data-yropen]");if(!t)return;const d=t.dataset;
-    if(d.wr!=null){try{localStorage.setItem("lb-wr-seen",weekKey())}catch(_){}ui.insView=null;location.hash="#insights";render()}
+    const t=e.target.closest("[data-wr],[data-wrhide],[data-yr],[data-yrhide],[data-insback],[data-yropen],[data-mo],[data-mohide]");if(!t)return;const d=t.dataset;
+    if(d.wr!=null){try{localStorage.setItem("lb-wr-seen",weekKey())}catch(_){}Recap.open("week")}
     else if(d.wrhide!=null){try{localStorage.setItem("lb-wr-seen",weekKey())}catch(_){}render()}
-    else if(d.yr){try{localStorage.setItem("lb-yr-seen",d.yr)}catch(_){}ui.yr=d.yr;ui.insView="year";location.hash="#insights";render()}
+    else if(d.yr){try{localStorage.setItem("lb-yr-seen",d.yr)}catch(_){}Recap.open("year",d.yr+"-06-01")}
+    else if(d.mo){try{localStorage.setItem("lb-mo-seen",d.mo)}catch(_){}Recap.open("month",d.mo+"-01")}
+    else if(d.mohide){try{localStorage.setItem("lb-mo-seen",d.mohide)}catch(_){}render()}
     else if(d.yrhide){try{localStorage.setItem("lb-yr-seen",d.yrhide)}catch(_){}render()}
     else if(d.yropen!=null){ui.insView="year";render();scrollTo(0,0)}
     else if(d.insback!=null){ui.insView=null;render()}

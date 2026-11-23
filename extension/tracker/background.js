@@ -7,7 +7,7 @@ const LANG = { fr: "French", pl: "Polish", de: "German", es: "Spanish", en: "Eng
   ru: "Russian", uk: "Ukrainian", cs: "Czech", sv: "Swedish", no: "Norwegian", nb: "Norwegian", da: "Danish", fi: "Finnish", ja: "Japanese",
   ko: "Korean", zh: "Chinese", ar: "Arabic", tr: "Turkish", el: "Greek", hu: "Hungarian", ro: "Romanian", hi: "Hindi", he: "Hebrew", iw: "Hebrew", ca: "Catalan" };
 const DEFAULT_IGNORE = ["mail.google.com", "accounts.google.com", "open.spotify.com", "limabrenodias.github.io", "localhost"];
-const DEFAULTS = { token: "", study: ["French", "Polish"], auto: true, minMin: 2, readIdle: 45, paused: false, lockedPause: true,
+const DEFAULTS = { token: "", study: ["French", "Polish"], auto: true, minMin: 2, readIdle: 45, paused: false, lockedPause: true, words: true,
   track: { media: true, read: true, write: true }, ignore: DEFAULT_IGNORE };
 const TYPE = { m: "Listening", r: "Reading", w: "Writing" };
 
@@ -50,6 +50,19 @@ let lock = Promise.resolve();
 const serial = fn => (lock = lock.then(fn, fn));
 
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
+  if (msg && msg.type === "word") {
+    serial(async () => {
+      const st = await get(); const det = LANG[msg.item.code] || "";
+      const lang = det || (st.settings.study.length === 1 ? st.settings.study[0] : "") || st.settings.study[0] || "Unknown";
+      const { words = [] } = await chrome.storage.local.get("words");
+      let word = msg.item.word;
+      if (lang === "French" || lang === "Italian" || lang === "Catalan") word = word.replace(/^(?:[ldjmntsc]|qu|jusqu|lorsqu|puisqu|all|dell|nell|sull|un)['’](?=\p{L})/iu, "");   // l'homme → homme
+      words.push({ lang, word, sentence: msg.item.sentence, source: msg.item.source, url: msg.item.url, at: Date.now() });
+      await chrome.storage.local.set({ words: words.slice(-500), lastWord: { word, lang, at: Date.now() } });
+      reply({ lang }); flushWords();
+    });
+    return true;
+  }
   if (msg && msg.type === "claims") {
     serial(async () => {
       const st = await get();
@@ -110,6 +123,21 @@ function entries(st) {
   return [...out.values()].filter(e => e.sec >= min).map(e => ({ ...e, minutes: Math.round(e.sec / 60) }));
 }
 
+// saved words go to Logbook (Logs → Words), at most 100 at a time
+let sendingWords = false;
+async function flushWords() {
+  if (sendingWords) return; sendingWords = true;
+  try {
+    const { words = [], settings = {} } = await chrome.storage.local.get(["words", "settings"]);
+    if (!words.length || !settings.token) return;
+    const batch = words.slice(0, 100);
+    const r = await fetch(SB_URL + "/rest/v1/rpc/ingest_words", { method: "POST", headers: { "Content-Type": "application/json", apikey: SB_KEY },
+      body: JSON.stringify({ p_token: settings.token, p_words: batch.map(({ at, ...w }) => w) }) });
+    if (r.ok) { const left = (await chrome.storage.local.get("words")).words || []; await chrome.storage.local.set({ words: left.slice(batch.length), wordsError: "" }); }
+    else await chrome.storage.local.set({ wordsError: r.status === 404 ? "Logbook needs database update 7 for saved words" : "Couldn't send words (" + r.status + ")" });
+  } catch (_) { /* offline: try again next minute */ } finally { sendingWords = false; }
+}
+
 async function flush(check) {
   const st = await get(); const now = Date.now();
   const cut = new Date(now - 14 * 864e5).toISOString().slice(0, 10);
@@ -140,5 +168,5 @@ async function flush(check) {
 }
 
 chrome.alarms.create("flush", { periodInMinutes: 1 });
-chrome.alarms.onAlarm.addListener(a => { if (a.name === "flush") serial(() => flush()); });
+chrome.alarms.onAlarm.addListener(a => { if (a.name === "flush") { serial(() => flush()); flushWords(); } });
 chrome.storage.onChanged.addListener((ch, area) => { if (area === "local" && (ch.rules || ch.settings)) serial(() => flush()); });

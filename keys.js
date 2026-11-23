@@ -59,7 +59,7 @@ const Keys=(()=>{
     else if(k==="f"||k==="F"){if(route()!=="focus"){e.preventDefault();go("focus")}}
     else if(k==="/"){e.preventDefault();go("logs");setTimeout(()=>{const i=$("#logQ");if(i)i.focus()},60)}
     else if(k==="?"){e.preventDefault();help()}
-    else if(/^[1-7]$/.test(k)&&ROUTES[+k-1]){e.preventDefault();go(ROUTES[+k-1][0])}
+    else if(/^[1-8]$/.test(k)&&ROUTES[+k-1]){e.preventDefault();go(ROUTES[+k-1][0])}
   });
   return {help,palette};
 })();

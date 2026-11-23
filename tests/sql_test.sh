@@ -12,7 +12,7 @@ create schema auth; create table auth.users(id uuid primary key);
 create function auth.uid() returns uuid language sql stable as $f$ select nullif(current_setting('request.uid',true),'')::uuid $f$;
 grant usage on schema auth to anon, authenticated; grant execute on function auth.uid() to anon, authenticated;
 SQL
-for f in supabase-setup supabase-social supabase-update-3 supabase-update-4 supabase-update-5 supabase-update-6; do
+for f in supabase-setup supabase-social supabase-update-3 supabase-update-4 supabase-update-5 supabase-update-6 supabase-update-7; do
   psql -q -v ON_ERROR_STOP=1 -d "$DB" -f "$f.sql" 2>&1 | grep -v NOTICE || true
   psql -q -v ON_ERROR_STOP=1 -d "$DB" -f "$f.sql" 2>&1 | grep -v NOTICE || true
 done

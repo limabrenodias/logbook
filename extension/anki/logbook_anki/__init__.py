@@ -59,10 +59,92 @@ def gather_stats():
     return out
 
 
+NOTE_TYPE = "Logbook word"
+FRONT = '<div class="lb-word">{{Word}}</div>{{#Sentence}}<div class="lb-sent">{{Sentence}}</div>{{/Sentence}}'
+BACK = ('{{FrontSide}}<hr id=answer>{{#Meaning}}<div class="lb-mean">{{Meaning}}</div>{{/Meaning}}'
+        '{{^Meaning}}<div class="lb-look"><a href="https://en.wiktionary.org/wiki/{{text:Word}}">Look up “{{Word}}”</a>'
+        ' — then add the meaning with Edit.</div>{{/Meaning}}'
+        '<div class="lb-meta">{{Language}}{{#Source}} · {{Source}}{{/Source}}{{#Link}} · <a href="{{Link}}">open the page</a>{{/Link}}</div>')
+CSS = (".card{font-family:-apple-system,Segoe UI,Inter,sans-serif;font-size:20px;text-align:center;color:#1d1d1f;background:#fff}"
+       ".lb-word{font-size:34px;font-weight:700;margin:12px 0}.lb-sent{font-size:19px;color:#444;line-height:1.5;max-width:640px;margin:0 auto}"
+       ".lb-mean{font-size:24px;margin:10px 0}.lb-look{font-size:16px;color:#666}.lb-meta{font-size:13px;color:#888;margin-top:18px}"
+       ".nightMode .card,.night_mode .card{background:#1e1e1e;color:#eee}.nightMode .lb-sent{color:#bbb}")
+
+
+def ensure_note_type():
+    mm = mw.col.models
+    m = (getattr(mm, "by_name", None) or mm.byName)(NOTE_TYPE)
+    if m:
+        return m
+    m = mm.new(NOTE_TYPE)
+    for f in ["Word", "Sentence", "Meaning", "Language", "Source", "Link"]:
+        (getattr(mm, "add_field", None) or mm.addField)(m, (getattr(mm, "new_field", None) or mm.newField)(f))
+    t = (getattr(mm, "new_template", None) or mm.newTemplate)("Recognise")
+    t["qfmt"], t["afmt"] = FRONT, BACK
+    (getattr(mm, "add_template", None) or mm.addTemplate)(m, t)
+    m["css"] = CSS
+    mm.add(m)
+    return (getattr(mm, "by_name", None) or mm.byName)(NOTE_TYPE)
+
+
+def _search_escape(v: str) -> str:
+    return "".join("\\" + ch if ch in '\\"*_:()' else ch for ch in v)
+
+
+def pull_words(quiet=True):
+    """Words you saved in Logbook (Alt+click with the browser tracker) become cards in your “Logbook words” deck."""
+    c = cfg()
+    if not c["token"] or not mw.col or not c.get("words_to_anki", True):
+        return
+    token = c["token"]
+
+    def done(fut):
+        try:
+            words = fut.result()
+        except Exception as e:
+            print("Logbook words:", e)
+            return
+        if not words or not mw.col:
+            return
+        m = ensure_note_type()
+        deck_id = mw.col.decks.id(cfg().get("words_deck") or "Logbook words")
+        handled = []
+        for w in words:
+            try:
+                found = mw.col.find_notes('"note:%s" "Word:%s" "Language:%s"' % (NOTE_TYPE, _search_escape(w["word"]), _search_escape(w["lang"])))
+                if not found:
+                    note = mw.col.new_note(m) if hasattr(mw.col, "new_note") else mw.col.newNote()
+                    import html
+                    note["Word"] = html.escape(w["word"])
+                    note["Sentence"] = core.sentence_html(w.get("sentence") or "", w["word"])
+                    note["Language"] = html.escape(w.get("lang") or "")
+                    note["Source"] = html.escape(w.get("source") or "")
+                    note["Link"] = html.escape(w.get("url") or "")
+                    if hasattr(mw.col, "add_note"):
+                        mw.col.add_note(note, deck_id)
+                    else:
+                        note.model()["did"] = deck_id
+                        mw.col.addNote(note)
+                handled.append(w["id"])
+            except Exception as e:
+                print("Logbook word:", w.get("word"), e)
+        if handled:
+            mw.taskman.run_in_background(lambda: core.mark_words(token, handled), lambda f: None)
+            new = len(handled)
+            tooltip(f"Logbook: {new} saved word{'s' if new != 1 else ''} added to Anki")
+            try:
+                mw.reset()
+            except Exception:
+                pass
+
+    mw.taskman.run_in_background(lambda: core.fetch_words(token), done)
+
+
 def sync(days=None, quiet=True):
     c = cfg()
     if not c["token"] or not mw.col:
         return
+    pull_words(quiet)
     days = days if days is not None else int(c.get("resend_days", 3))
     try:
         entries, _ = gather(days)
@@ -130,6 +212,12 @@ class Settings(QDialog):
         self.days = QSpinBox(); self.days.setRange(1, 60); self.days.setValue(int(c.get("resend_days", 3)))
         self.days.setSuffix(" days")
         form.addRow("Re-check the last", self.days)
+        from aqt.qt import QCheckBox
+        self.words = QCheckBox("Add the words I save in Logbook to Anki, in this deck:")
+        self.words.setChecked(bool(c.get("words_to_anki", True)))
+        self.words_deck = QLineEdit(c.get("words_deck") or "Logbook words")
+        wrow = QHBoxLayout(); wrow.addWidget(self.words); wrow.addWidget(self.words_deck)
+        form.addRow("Saved words", wrow)
         lay.addLayout(form)
         lay.addWidget(QLabel("<b>Decks</b> — click ▸ to open a deck and set its subdecks. "
                              "A subdeck left on “same as parent” is logged together with its parent."))
@@ -237,6 +325,8 @@ class Settings(QDialog):
         c = cfg()
         c["token"] = self.token.text().strip()
         c["resend_days"] = self.days.value()
+        c["words_to_anki"] = self.words.isChecked()
+        c["words_deck"] = (self.words_deck.text().strip() or "Logbook words")[:80]
         decks = {}
         for n, subj, typ in self.rows:
             v = subj.currentText().strip()

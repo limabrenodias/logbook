@@ -80,7 +80,7 @@ const Focus=(()=>{
     const rt=document.getElementById("fzRoot");if(rt){rt.classList.add("fz-root-done");setTimeout(()=>rt.classList.remove("fz-root-done"),2500)}
     if(was==="focus"){const m=Math.max(1,Math.round(total()/60000));Sound.play(bell());notify("Focus session complete","Time for a gentle break 🍵");
       const t0=T();const award=Points.finish(st,true,m,st.round%t0.r===0?t0.l:t0.s);lastAward=award;segClose(st.endAt);record(true,award,m);
-      if(cfg.autoLog)doLog(m,started,task(),award);else if(award)toast(`+${award.total} focus points ✨`);
+      if(cfg.autoLog)doLog(m,started,task(),award);else if(award)toast(`+${award.total} focus coins 🪙`);
       advance(cfg.autoBreak);if(!cfg.autoBreak){Sound.stopAmbient();amPlaying=false;keepAwake(false)}
       if(!(cfg.autoLog&&cfg.autoBreak)){pending={m,d:ymd(new Date(started)),logged:cfg.autoLog,done:true,award};sheet="done";if(mounted)renderSheet()}}
     else{Sound.play(breakBell());notify("Break's over","Ready when you are 🌿");advance(cfg.autoFocus);if(!cfg.autoFocus){Sound.stopAmbient();amPlaying=false;keepAwake(false)}}
@@ -145,7 +145,7 @@ const Focus=(()=>{
   let lastAward=null;
   function doLog(m,started,t,award){
     if(typeof readOnly==="function"&&readOnly()){toast("Switch to your own logbook to save sessions");return}
-    saveLog({a:t.a,s:t.s,t:t.t,m,d:typeof started==="string"?started:ymd(new Date(started)),src:"pomodoro"});toast(`Logged ${m} min of ${t.s} 🌿${award?` · +${award.total} points`:""}`);
+    saveLog({a:t.a,s:t.s,t:t.t,m,d:typeof started==="string"?started:ymd(new Date(started)),src:"pomodoro"});toast(`Logged ${m} min of ${t.s} 🌿${award?` · +${award.total} coins`:""}`);
   }
 
   /* ---------- extras ---------- */
@@ -162,13 +162,13 @@ const Focus=(()=>{
     return `--fz-bg:${p.bg};--fz-card:${p.card};--fz-ink:${p.ink};--fz-muted:${p.muted};--fz-accent:${p.accent};--fz-chip:${p.chip};--fz-line:${p.line};--fz-on-accent:${light?"#fff":"#1a1a1a"};--fz-face:${light?"#fffdf9":"rgba(255,255,255,.07)"};--fz-card-solid:${light?"#fff":"rgba(255,255,255,.13)"}`}
   function quote(){const q=QUOTES[st.phase];return q[(st.round*3+(st.phase==="focus"?0:1))%q.length]}
   function upNext(){const t=T();if(st.phase==="focus")return (st.round%t.r===0?"Long break":"Break")+" • "+(st.round%t.r===0?t.l:t.s)+"m";return "Focus • "+t.f+"m"}
-  function ptsChip(){const s=Points.summary();return `★ ${s.total.toLocaleString()}${s.today?`<small>+${s.today} today</small>`:""}${s.chain>1?`<small>🔥${s.chain}</small>`:""}`}
+  function ptsChip(){const s=Points.summary();let b=s.total;try{if(typeof Rewards!=="undefined"&&!readOnly())b=Rewards.balance()}catch(_){}return `🪙 ${b.toLocaleString()}${s.today?`<small>+${s.today} today</small>`:""}${s.chain>1?`<small>🔥${s.chain}</small>`:""}`}
   function topBar(){return `
         <a class="fz-chip icon" href="#home" title="Back to Logbook">${IC.back}<span class="lbl">Logbook</span></a>
         <button class="fz-chip" data-fz="settings" id="fzChip">${chipText()}</button>
         <span class="fz-sp"></span>
         <button class="fz-chip icon" data-fz="day" title="Today's focus timeline">${IC.cal}<span class="lbl">Today</span></button>
-        <button class="fz-chip fz-pts" data-fz="points" id="fzPts" title="Focus points">${ptsChip()}</button>
+        <button class="fz-chip fz-pts" data-fz="points" id="fzPts" title="Focus coins">${ptsChip()}</button>
         <div class="fz-sound"><button class="fz-round" data-fz="mute" title="Mute">${cfg.muted?IC.mute:IC.vol}</button><input class="fz-vol" type="range" id="fzVol" min="0" max="1" step="0.01" value="${cfg.vol}" style="--v:${cfg.vol*100}%"><select id="fzAmb" title="Ambient sound">${Sound.AMBIENTS.map(([k,n])=>`<option value="${k}" ${k===ambient()?"selected":""}>${n}</option>`).join("")}</select></div>
         <button class="fz-chip icon" data-fz="layout" title="${imm()?"Clean layout":"Immersive layout"}">${imm()?IC.clean:IC.imm}</button>
         <button class="fz-chip icon" data-fz="settings" title="Settings">${IC.gear}</button>
@@ -259,7 +259,7 @@ const Focus=(()=>{
       if(imm()&&!sc.painting){const b=document.getElementById("fzBg");if(b){if(sc.bgUpdate)sc.bgUpdate(b,pp,ctx);else if(!sc.bg&&sc.update)sc.update(b,pp,ctx)}}
       else{const a=document.getElementById("fzArt");if(a&&sc.update)sc.update(a,pp,ctx)}lastP=p}
     const pr=document.getElementById("fzPresence");if(pr){const need=Points.needsPresence(st);if(need!==(pr.dataset.on==="1")){pr.dataset.on=need?"1":"0";
-      pr.innerHTML=need?`<div class="fz-presence"><div><b>Welcome back 👋</b><span>The next session started on its own. Tap anywhere or press a key to confirm you're here — focus points count from now.</span></div></div>`:""}}
+      pr.innerHTML=need?`<div class="fz-presence"><div><b>Welcome back 👋</b><span>The next session started on its own. Tap anywhere or press a key to confirm you're here — focus coins count from now.</span></div></div>`:""}}
     if(full){const pt=document.getElementById("fzPts");if(pt)pt.innerHTML=ptsChip()}
     const rt=document.getElementById("fzRoot");if(rt&&imm()){rt.classList.toggle("calm",st.running&&!sheet&&Date.now()-lastMove>4500);rt.classList.toggle("running",!idle())}
   }
@@ -307,7 +307,7 @@ const Focus=(()=>{
     }else if(sheet==="day"){h=dayHTML();
     }else if(sheet==="points"){
       const S=Points.summary();const ex=Points.score(25,25,3,30000,true);
-      h=`<div class="row"><h3>Focus points</h3><span class="spacer"></span><button class="fz-pbtn sec" data-fz="close">Close</button></div>
+      h=`<div class="row"><h3>Focus coins</h3><span class="spacer"></span><button class="fz-pbtn sec" data-fz="close">Close</button></div>
       <div class="fz-ptgrid"><div><small>Today</small><b>${S.today}</b></div><div><small>Last 7 days</small><b>${S.week}</b></div><div><small>All time</small><b>${S.total.toLocaleString()}</b></div><div><small>Chain</small><b>${S.chain?"🔥 "+S.chain:"—"}</b></div></div>
       ${S.due?`<p class="fz-due">${S.due>Date.now()?`Be back by <b>${new Date(S.due).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</b> to keep your chain and get the on-time bonus.`:`Your break ended — start within ${Math.max(0,Math.ceil((S.due+S.graceMin*60000-Date.now())/60000))} min to keep the chain.`}</p>`:""}
       <h4>How you earn</h4><ul class="fz-rules">
@@ -317,12 +317,12 @@ const Focus=(()=>{
         <li><b>Chains</b>: each session started on time after its break adds ×0.1 (up to ×1.5), plus an on-time bonus of +5 (within 1 min), +3 (3 min) or +1 (5 min).</li>
         <li><b>No stalling</b>: the break deadline is set when focus ends. Waiting on the start screen or pausing the break doesn't move it — more than ${S.graceMin} min late resets the chain.</li>
         <li><b>Presence</b>: a session that starts automatically needs one tap to confirm you're there; until then it earns nothing.</li></ul>
-      <p style="color:#958a80;font-size:12.5px">Example: a finished 25-min session, 3rd in a row, back within 30 s → ${ex.base} + ${ex.comp} + ${ex.onT} = <b>${ex.total} points</b>.</p>
+      <p style="color:#958a80;font-size:12.5px">Example: a finished 25-min session, 3rd in a row, back within 30 s → ${ex.base} + ${ex.comp} + ${ex.onT} = <b>${ex.total} coins</b>.</p>
       <h4>Recent sessions</h4>${S.recent.map(r=>`<div class="fz-ptrow"><span>${new Date(r.t).toLocaleString([], {weekday:"short",hour:"2-digit",minute:"2-digit"})} · ${r.min} min${r.n>1?` · 🔥${r.n}`:""}</span><b>+${r.total}</b></div>`).join("")||'<p style="color:#958a80;font-size:13px">No sessions yet — start one!</p>'}`;
     }else if(sheet==="done"&&pending){
       const brk=st.phase!=="focus",bm=mins(st.phase),fm=mins("focus");const aw=pending.award;
       h=`<div class="fz-done"><div class="leaf">🌿</div><h3>${pending.early?"Stopped early — the work still counts":"Nicely done"}</h3><p>${pending.m} minute${pending.m===1?"":"s"} of focus${pending.logged?" — saved to your logbook ✓":". It'll be saved with:"}</p>
-        ${aw?`<div class="fz-earn"><b>+${aw.total} focus points</b><span>${aw.min} min${aw.lenM>1?` × ${aw.lenM.toFixed(2)} length`:""}${aw.chM>1?` × ${aw.chM.toFixed(1)} chain`:""}${aw.comp?` · +${aw.comp} finish`:""}${aw.onT?` · +${aw.onT} on time`:""}</span></div>`:`<div class="fz-earn none"><span>No points this time — the session wasn't confirmed as attended.</span></div>`}</div>
+        ${aw?`<div class="fz-earn"><b>+${aw.total} focus coins</b><span>${aw.min} min${aw.lenM>1?` × ${aw.lenM.toFixed(2)} length`:""}${aw.chM>1?` × ${aw.chM.toFixed(1)} chain`:""}${aw.comp?` · +${aw.comp} finish`:""}${aw.onT?` · +${aw.onT} on time`:""}</span></div>`:`<div class="fz-earn none"><span>No points this time — the session wasn't confirmed as attended.</span></div>`}</div>
       ${pending.logged?"":logFields(tk)}
       <h4 style="text-align:center;margin-top:18px">What's next?</h4>
       ${brk?`<p class="fz-due" style="text-align:center">Break until <b>${new Date(Date.now()+bm*60000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</b> — come back on time to grow your chain 🔥</p>`:""}

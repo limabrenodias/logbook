@@ -176,9 +176,9 @@ const Social=(()=>{
     if(readOnly())return roNote()+`<h1>Friends</h1><div class="card empty-state"><p>Switch back to your own logbook to see your friends.</p><button class="btn" data-act="viewMe">Back to my logbook</button></div>`;
     if(ok===null&&!loading)load(true).then(()=>{if(route()==="friends")render()});
     const t=tab();const inc=friends.filter(f=>f.status==="incoming").length;
-    const body=ok===false?setupNeeded():ok===null?'<div class="card empty-state">Loading…</div>':t==="communities"?viewComm():t==="together"?viewTogether():viewActivity();
+    const body=ok===false?setupNeeded():ok===null?'<div class="card empty-state">Loading…</div>':t==="communities"?viewComm():t==="together"?viewTogether():t==="clans"?Clans.view():Clans.saveCard()+viewActivity();
     return `<h1>Friends</h1><p class="sub">Study with friends, see what they're doing, and how your languages' communities are going.</p>
-      <div class="seg" style="margin-bottom:16px">${[["activity","Activity"+(inc?` (${inc})`:"")],["communities","Communities"],["together","Study together"+(room?" •":"")]].map(([k,l])=>`<button class="${k===t?"on":""}" data-soctab="${k}">${l}</button>`).join("")}</div>${body}`;
+      <div class="seg" style="margin-bottom:16px">${[["activity","Activity"+(inc?` (${inc})`:"")],["clans","Clans"],["communities","Communities"],["together","Study together"+(room?" •":"")]].map(([k,l])=>`<button class="${k===t?"on":""}" data-soctab="${k}">${l}</button>`).join("")}</div>${body}`;
   }
   let blocked=null;
   function privacyCard(){
@@ -193,7 +193,7 @@ const Social=(()=>{
 
   /* ---------- events ---------- */
   document.addEventListener("click",async e=>{
-    const t=e.target.closest("[data-soctab]");if(t){ui.socTab=t.dataset.soctab;render();if(ui.socTab!=="communities")load(true).then(()=>route()==="friends"&&render());return}
+    const t=e.target.closest("[data-soctab]");if(t){ui.socTab=t.dataset.soctab;if(ui.socTab==="clans")ui.clanId=null;render();if(ui.socTab!=="communities")load(true).then(()=>route()==="friends"&&render());return}
     const rx=e.target.closest("[data-react]");if(rx){const x=feed.find(f=>f.log_id===rx.dataset.react);if(!x)return;const em=rx.dataset.emo;const next=x.mine===em?null:em;
       const rs={...(x.reactions||{})};if(x.mine)rs[x.mine]=Math.max(0,(rs[x.mine]||1)-1);if(next)rs[next]=(rs[next]||0)+1;Object.keys(rs).forEach(k=>{if(!rs[k])delete rs[k]});x.reactions=rs;x.mine=next;render();
       const {error}=await sb.rpc("react",{p_log:x.log_id,p_emoji:next});if(error){fail(error,"Couldn't react");load(true).then(render)}return}

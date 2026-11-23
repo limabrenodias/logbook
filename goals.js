@@ -34,24 +34,46 @@ function actionToast(msg,label,fn,ms=6000){
   clearTimeout(actionToast._t);actionToast._t=setTimeout(()=>t.style.display="none",ms);
 }
 
-/* ---------- streak with freezes and rest days ----------
-   A freeze is earned for every 7 logged days in a row (you can hold 2). A missed day
-   uses one automatically. Rest days you choose never break the streak. Worked out
-   from your logs, so every device shows the same number. */
+/* ---------- streak with freezes, rest days and ways to get it back ----------
+   A day counts when you log at least the streak minimum (default: anything). A missed day is covered, in order, by:
+   a repair you bought with coins · a friend who saved it · a make-up day (double your daily goal the next day,
+   once every 14 days) · a freeze (earn one for every 7 days in a row, or buy one; hold up to 3).
+   Rest days you choose never break it. Worked out from your logs, so every device shows the same number. */
+let _si=null;
 function streakInfo(){
+  const p=Prefs.get();const key=JSON.stringify([p.streakMin,p.repairs,p.freezeBuys,p.rest,p.freezes,p.daily,typeof Rewards!=="undefined"?Rewards.savesKey():"",today(),viewing]);
+  const c0=all();if(_si&&_si.c===c0&&_si.key===key)return _si.v;
   const map=byDate();const keys=Object.keys(map).sort();const c=cons();const t=today();const gs=Goals.skipAll();
-  const out={cur:0,best:0,freezes:0,frozen:new Set(),rest:new Set(),todayDone:!!map[t],usedRecently:0};
+  const min=Math.max(1,+p.streakMin||1);const ok=k=>!!map[k]&&map[k].m>=min;
+  const repairs=new Set(p.repairs||[]);const saves=typeof Rewards!=="undefined"?Rewards.saves():new Set();
+  const buys=[...(p.freezeBuys||[])].sort();const mk=Math.max(20,2*(c.daily||15));
+  const out={cur:0,best:0,freezes:0,frozen:new Set(),rest:new Set(),saved:new Map(),todayDone:ok(t),usedRecently:0,min,makeupNeed:mk,reached:{},days:0};
   if(!keys.length)return out;
-  let d=parseD(keys[0]);const end=parseD(t);let cur=0,best=0,fz=0,run=0;const recentCut=ymd(addDays(new Date(),-13));
+  let d=parseD(keys[0]);const end=parseD(t);let cur=0,best=0,fz=0,run=0,lastMakeup=null,bi=0;const recentCut=ymd(addDays(new Date(),-13));
   while(d<=end){const k=ymd(d);
-    if(map[k]){cur++;run++;if(c.freezes&&run%7===0&&fz<2)fz++;if(cur>best)best=cur}
+    while(bi<buys.length&&buys[bi]<=k){if(fz<3)fz++;bi++}
+    if(ok(k)){cur++;run++;out.days++;if(c.freezes&&run%7===0&&fz<2)fz++;if(cur>best){best=cur;if(!out.reached[best])out.reached[best]=k}}
     else if(k!==t){
+      const next=ymd(addDays(d,1));
       if(c.rest.includes(d.getDay())||gs.has(k))out.rest.add(k);
+      else if(cur>0&&repairs.has(k))out.saved.set(k,"repair");
+      else if(cur>0&&saves.has(k))out.saved.set(k,"friend");
+      else if(cur>0&&map[next]&&map[next].m>=mk&&(!lastMakeup||daysBetween(lastMakeup,k)>=14)){out.saved.set(k,"makeup");lastMakeup=k}
       else if(c.freezes&&fz>0&&cur>0){fz--;out.frozen.add(k);if(k>=recentCut)out.usedRecently++}
       else{cur=0;run=0}}
     d=addDays(d,1)}
-  return Object.assign(out,{cur,best,freezes:fz});
+  Object.assign(out,{cur,best,freezes:fz});
+  // a streak that just broke can be repaired (yesterday or the day before)
+  const y=ymd(addDays(new Date(),-1));const y2=ymd(addDays(new Date(),-2));
+  for(const k of [y,y2]){if(ok(k)||out.rest.has(k)||out.saved.has(k)||out.frozen.has(k)||repairs.has(k))continue;
+    const before=prevRun(map,min,k,out,c,gs);if(before>0){out.repairable={d:k,before,cost:Math.min(400,50+2*before)};break}}
+  if(!ok(t)&&map[y]==null&&!out.rest.has(y)&&!out.saved.has(y)&&!out.frozen.has(y)){const before=prevRun(map,min,y,out,c,gs);
+    if(before>0&&(!lastMakeup||daysBetween(lastMakeup,y)>=14))out.makeup={d:y,need:mk,done:map[t]?map[t].m:0,before}}
+  _si={c:c0,key,v:out};return out;
 }
+// length of the streak that ended just before day k
+function prevRun(map,min,k,si,c,gs){let n=0;let d=addDays(parseD(k),-1);for(let i=0;i<4000;i++){const x=ymd(d);
+  if(map[x]&&map[x].m>=min)n++;else if(!(c.rest.includes(d.getDay())||gs.has(x)||si.saved.has(x)||si.frozen.has(x)))break;d=addDays(d,-1)}return n}
 
 /* ---------- Today card: daily goal ring, this week's strip, weekly target ---------- */
 function ring(p,size=84){const r=size/2-7,C=2*Math.PI*r;p=Math.max(0,Math.min(1,p));
