@@ -42,6 +42,6 @@ const Spotify=(()=>{
     else if(e.target.hasAttribute&&e.target.hasAttribute("data-spmusic"))save({music:e.target.checked});
   });
   function launch(){const p=new URLSearchParams(location.search);const v=p.get("spotify");if(!v)return;p.delete("spotify");history.replaceState(null,"",location.pathname+(p.toString()?"?"+p:"")+location.hash);
-    toast(v==="connected"?"Spotify connected 🎧 — podcasts in your languages are now counted":v==="cancelled"?"Spotify connection cancelled":"That link expired — try connecting again",6000);location.hash="#manage"}
+    toast(v==="connected"?"Spotify connected 🎧 — podcasts in your languages are now counted":v==="cancelled"?"Spotify connection cancelled":v==="failed"?"Spotify approved, but Logbook couldn\u2019t save the connection — check the function logs in Supabase":"That link expired — try connecting again",6000);location.hash="#manage"}
   return {card,launch,reset(){st=null}};
 })();

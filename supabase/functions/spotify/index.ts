@@ -137,9 +137,10 @@ if (typeof Deno !== "undefined") {
         await db("spotify_states?state=eq." + encodeURIComponent(q.get("state") || ""), { method: "DELETE" });
         const t = await token({ grant_type: "authorization_code", code: q.get("code") || "", redirect_uri: REDIRECT });
         const me = await (await fetch("https://api.spotify.com/v1/me", { headers: { Authorization: "Bearer " + t.access_token } })).json();
-        await db("spotify_links?on_conflict=user_id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({
+        const saved = await db("spotify_links?on_conflict=user_id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({
           user_id: st[0].user_id, refresh_token: t.refresh_token, access_token: t.access_token, expires_at: new Date(Date.now() + t.expires_in * 1000).toISOString(),
           spotify_name: me.display_name || me.id || "", connected_at: new Date().toISOString(), last_error: null }) });
+        if (!saved.ok) { console.error("saving the connection failed", saved.status, await saved.text()); return back("failed"); }
         return back("connected");
       }
       if (path === "/poll") {
