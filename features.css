@@ -218,3 +218,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline-offset:0
 .anki-g .k{color:var(--text-secondary)}.anki-g .v{font-size:20px;font-weight:700}
 @media (max-width:820px){.anki-g{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .sp-row{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-size:13.5px}.sp-row select{max-width:200px}
+.srcchip{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:1px 7px;border-radius:999px;margin-right:7px;vertical-align:1px;white-space:nowrap}
+.srcchip.auto{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.srcchip.man{background:color-mix(in srgb,var(--text-muted) 14%,transparent);color:var(--text-muted)}

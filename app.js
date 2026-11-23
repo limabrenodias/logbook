@@ -10,6 +10,12 @@ const LANGS=["English","Spanish","French","German","Italian","Portuguese","Polis
 const BASE_TYPES=["Listening","Speaking","Writing","Reading","Grammar","Vocabulary","Pronunciation","Mixed"];
 const IMPORT_REMAP={"Rätoromanisch":"Aviation","Portuguese":"Programming"};
 const MANUAL_SRC=["manual","stopwatch","timer","polylogger","pomodoro"];
+const SRC_LABEL={manual:"Manual",stopwatch:"Stopwatch",timer:"Timer",pomodoro:"Focus",polylogger:"Imported",anki:"Anki",spotify:"Spotify",youtube:"YouTube",netflix:"Netflix",video:"Browser",reading:"Browser",writing:"Browser"};
+const srcLabel=s=>SRC_LABEL[s]||(s?s[0].toUpperCase()+s.slice(1):"Manual");
+const isAuto=l=>!MANUAL_SRC.includes(l.src||"manual");
+function srcChip(l){const lab=srcLabel(l.src);const auto=isAuto(l);
+  return `<span class="srcchip ${auto?"auto":"man"}" title="${auto?"Added automatically by "+esc(lab):lab==="Imported"?"Imported from Polylogger":"Added by you"+(lab==="Manual"?"":" ("+esc(lab.toLowerCase())+")")}">${auto?"⚡ ":""}${esc(lab)}</span>`}
+function srcMatch(l){const f=ui.logSrc;if(f==="All")return true;if(f==="auto")return isAuto(l);if(f==="manual")return !isAuto(l);return srcLabel(l.src)===f.slice(4)}
 const ICONS={
  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
  stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
@@ -41,7 +47,7 @@ let timer=null;
 let phase="boot";       // boot | auth | username | recovery | app | config
 let authMsg="";
 let cache=null;
-let ui={statSubj:null,range:"30D",hmYear:new Date().getFullYear(),hmSubj:"All",logQ:"",logSubj:"All",logType:"All",logLimit:150};
+let ui={statSubj:null,range:"30D",hmYear:new Date().getFullYear(),hmSubj:"All",logQ:"",logSubj:"All",logType:"All",logSrc:"All",logLimit:150};
 
 /* ============ helpers ============ */
 const $=s=>document.querySelector(s);
@@ -273,14 +279,17 @@ function viewStats(){
 }
 function afterStats(){const el=$("#bars");if(el)barChart(el,rangeData(ui.statSubj,ui.range))}
 
-function logRow(l){const auto=!MANUAL_SRC.includes(l.src);const ro=readOnly();const sel=ui.sel;
-  if(sel)return `<label class="log selrow ${sel.has(l.i)?"on":""}"><input type="checkbox" data-selid="${l.i}" ${sel.has(l.i)?"checked":""} aria-label="Select this log"><div class="main"><div class="act ${l.a?"":"empty"}">${l.a?esc(l.a):"No description"}${auto?`<span class="auto">${esc(l.src)}</span>`:""}</div><div class="meta">${esc(l.s)} · ${esc(l.t)}</div></div><div class="min num">${l.m} min</div></label>`;
-  return `<div class="log"><div class="main"><div class="act ${l.a?"":"empty"}">${l.a?esc(l.a):"No description"}${auto?`<span class="auto">${esc(l.src)}</span>`:""}</div><div class="meta">${esc(l.s)} · ${esc(l.t)}${l.r&&Lib.titleOf(l.r)?` · <span class="rtag">${esc(Lib.titleOf(l.r))}</span>`:""}</div></div><div class="min num">${l.m} min</div>${ro?"":`<button class="ib" data-again="${l.i}" title="Log again today">${ICONS.again}</button><button class="ib" data-edit="${l.i}" title="Edit">${ICONS.edit}</button><button class="ib" data-del="${l.i}" title="Delete">${ICONS.del}</button>`}</div>`}
+function logRow(l){const ro=readOnly();const sel=ui.sel;
+  if(sel)return `<label class="log selrow ${sel.has(l.i)?"on":""}"><input type="checkbox" data-selid="${l.i}" ${sel.has(l.i)?"checked":""} aria-label="Select this log"><div class="main"><div class="act ${l.a?"":"empty"}">${l.a?esc(l.a):"No description"}</div><div class="meta">${srcChip(l)}${esc(l.s)} · ${esc(l.t)}</div></div><div class="min num">${l.m} min</div></label>`;
+  return `<div class="log"><div class="main"><div class="act ${l.a?"":"empty"}">${l.a?esc(l.a):"No description"}</div><div class="meta">${srcChip(l)}${esc(l.s)} · ${esc(l.t)}${l.r&&Lib.titleOf(l.r)?` · <span class="rtag">${esc(Lib.titleOf(l.r))}</span>`:""}</div></div><div class="min num">${l.m} min</div>${ro?"":`<button class="ib" data-again="${l.i}" title="Log again today">${ICONS.again}</button><button class="ib" data-edit="${l.i}" title="Edit">${ICONS.edit}</button><button class="ib" data-del="${l.i}" title="Delete">${ICONS.del}</button>`}</div>`}
 function logTabs(){const t=ui.logTab||"logs";return `<div class="seg" style="margin-bottom:16px">${[["logs","Logs"],["res","Resources"],["scores","Scores"]].map(([k,l])=>`<button class="${k===t?"on":""}" data-logtab="${k}">${l}</button>`).join("")}</div>`}
+function srcSelect(){const labs=[...new Set(all().logs.map(l=>srcLabel(l.src)))];const o=(v,t)=>`<option value="${esc(v)}" ${ui.logSrc===v?"selected":""}>${esc(t)}</option>`;
+  const auto=labs.filter(x=>isAuto({src:Object.keys(SRC_LABEL).find(k=>SRC_LABEL[k]===x)||x.toLowerCase()})).sort(),man=labs.filter(x=>!auto.includes(x)).sort();
+  return `<select id="logSrc" aria-label="Added by">${o("All","All sources")}${o("manual","Added by me")}${o("auto","Automatic")}${auto.length?`<optgroup label="Automatic">${auto.map(x=>o("src:"+x,x)).join("")}</optgroup>`:""}${man.length>1?`<optgroup label="By me">${man.map(x=>o("src:"+x,x)).join("")}</optgroup>`:""}</select>`}
 function viewLogs(){
   if(ui.logTab==="res")return roNote()+`<h1>Resources</h1><p class="sub">Books, podcasts, series and courses — progress and hours.</p>`+logTabs()+Lib.viewRes();
   if(ui.logTab==="scores")return roNote()+`<h1>Scores</h1><p class="sub">Practice exams and tests over time.</p>`+logTabs()+Lib.viewScores();
-  const q=ui.logQ.toLowerCase();const list=all().logs.filter(l=>(ui.logSubj==="All"||l.s===ui.logSubj)&&(ui.logType==="All"||l.t===ui.logType)&&(!q||(l.a||"").toLowerCase().includes(q)));
+  const q=ui.logQ.toLowerCase();const list=all().logs.filter(l=>(ui.logSubj==="All"||l.s===ui.logSubj)&&(ui.logType==="All"||l.t===ui.logType)&&srcMatch(l)&&(!q||(l.a||"").toLowerCase().includes(q)));
   const shown=list.slice(0,ui.logLimit);let html="",cur=null,dayTot={};for(const l of list)dayTot[l.d]=(dayTot[l.d]||0)+l.m;
   for(const l of shown){if(l.d!==cur){if(cur)html+="</div>";cur=l.d;html+=`<div class="day"><h3><span>${fmtDate(l.d)}</span><span class="num">${dur(dayTot[l.d])}</span></h3>`}html+=logRow(l)}
   if(cur)html+="</div>";
@@ -292,7 +301,7 @@ function viewLogs(){
     <select id="selType" ${sel.size?"":"disabled"}><option value="">Change type…</option>${types().map(x=>`<option>${esc(x)}</option>`).join("")}</select>
     <input type="date" id="selDate" title="Move to date" aria-label="Move selected logs to a date" max="${today()}" ${sel.size?"":"disabled"}>
     <button class="btn danger sm" data-act="selDel" ${sel.size?"":"disabled"}>Delete</button></div>`:""}
-  <div class="row"><input type="search" id="logQ" placeholder="Search activity…" value="${esc(ui.logQ)}" style="flex:1;min-width:180px"><select id="logSubj">${subjOptions(ui.logSubj,true)}</select><select id="logType"><option value="All">All types</option>${types().map(t=>`<option ${t===ui.logType?"selected":""}>${esc(t)}</option>`).join("")}</select></div>
+  <div class="row"><input type="search" id="logQ" placeholder="Search activity…" value="${esc(ui.logQ)}" style="flex:1;min-width:180px"><select id="logSubj">${subjOptions(ui.logSubj,true)}</select><select id="logType"><option value="All">All types</option>${types().map(t=>`<option ${t===ui.logType?"selected":""}>${esc(t)}</option>`).join("")}</select>${srcSelect()}</div>
   <div>${html||'<div class="empty-state">No logs match.</div>'}</div>
   ${list.length>ui.logLimit?`<div style="text-align:center;margin-top:16px" id="moreLogs"><button class="btn sec" data-act="more">Show more (${list.length-ui.logLimit} left)</button></div>`:""}`;
 }
@@ -540,6 +549,7 @@ document.addEventListener("change",e=>{
   else if(id==="statSubj"){ui.statSubj=e.target.value;render()}
   else if(id==="logSubj"){ui.logSubj=e.target.value;ui.logLimit=150;render()}
   else if(id==="logType"){ui.logType=e.target.value;ui.logLimit=150;render()}
+  else if(id==="logSrc"){ui.logSrc=e.target.value;ui.logLimit=150;render()}
   else if(id==="viewSel"||id==="viewSelM")switchView(e.target.value);
   else if(id==="selSubj"||id==="selType"||id==="selDate"){const v=e.target.value;if(!v||!ui.sel||!ui.sel.size)return;let val=v;
     if(v==="__other"){val=(prompt("New subject name")||"").trim().slice(0,60);if(!val){e.target.value="";return}}
@@ -557,7 +567,7 @@ setInterval(()=>{if(phase==="app"&&!document.hidden)loadTimer()},20000);
 
 /* ============ boot ============ */
 async function switchView(id){
-  viewing=id;ui.statSubj=null;ui.hmSubj="All";ui.logSubj="All";logsArr=[];invalidate();
+  viewing=id;ui.statSubj=null;ui.hmSubj="All";ui.logSubj="All";ui.logSrc="All";logsArr=[];invalidate();
   viewProfile=id===me?myProfile:(await loadProfile(id))||{username:"?",subjects:[],types:[]};
   $("#view").innerHTML='<div class="empty-state">Loading…</div>';renderNav();renderBanner();
   try{await Promise.all([loadLogs(),Lib.load(id)])}catch(e){fail(e,"Couldn't load that logbook")}render();

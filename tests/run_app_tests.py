@@ -152,6 +152,18 @@ def main():
         check("Anki statistics card", "3,200" in pg.inner_text("#view") or "3200" in pg.inner_text("#view"))
         pg.evaluate("location.hash='#manage'"); pg.wait_for_timeout(500)
         check("Spotify card offers to connect", pg.query_selector("[data-sp=connect]"))
+        pg.evaluate("(()=>{const DB=JSON.parse(localStorage.getItem('mockdb'));const t=new Date().toISOString().slice(0,10);"
+                    "DB.logs.push({id:crypto.randomUUID(),user_id:me,d:t,subject:'French',type:'Vocabulary',minutes:17,activity:'Anki · Français',src:'anki',ext_id:t+'|1',created_at:new Date().toISOString()});localStorage.setItem('mockdb',JSON.stringify(DB))})()")
+        pg.evaluate("location.hash='#logs'"); pg.reload(); pg.wait_for_timeout(1500)
+        check("source chips on logs", pg.query_selector(".srcchip.auto") and pg.query_selector(".srcchip.man"))
+        pg.select_option("#logSrc", "auto"); pg.wait_for_timeout(300)
+        check("Automatic filter shows only automatic logs", pg.query_selector(".srcchip.auto") and not pg.query_selector(".srcchip.man"))
+        pg.select_option("#logSrc", "manual"); pg.wait_for_timeout(300)
+        check("Added-by-me filter hides automatic logs", not pg.query_selector(".srcchip.auto") and pg.query_selector(".srcchip.man"))
+        pg.screenshot(path="/tmp/logs_src.png")
+        pg.select_option("#logSrc", "src:Anki"); pg.wait_for_timeout(300)
+        check("Single-source filter", "Anki" in pg.inner_text("#view") and not pg.query_selector(".srcchip.man"))
+        pg.select_option("#logSrc", "All"); pg.wait_for_timeout(200)
 
         print("Focus sync")
         pg.evaluate("FocusSync.run()"); pg.wait_for_timeout(1200)
