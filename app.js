@@ -544,8 +544,14 @@ document.addEventListener("click",async e=>{
   else if(act==="logout"){await sb.auth.signOut();}
   else if(act==="signup"){const email=$("#email").value.trim(),pw=$("#pw").value;if(!email||pw.length<8){authMsg="Enter your email and a password of at least 8 characters.";return render()}
     const cap=Captcha.token();if(cap===false){authMsg="Please complete the check above.";return render()}
-    const {data,error}=await sb.auth.signUp({email,password:pw,options:{emailRedirectTo:location.origin+location.pathname,captchaToken:cap||undefined}});Captcha.reset();
-    authMsg=error?error.message:data.session?"":"Check your email and click the confirmation link, then sign in.";render()}
+    const btn=e.target.closest("[data-act]");btn.disabled=true;btn.textContent="Creating your account…";authMsg="";
+    try{const {data,error}=await sb.auth.signUp({email,password:pw,options:{emailRedirectTo:location.origin+location.pathname,captchaToken:cap||undefined}});Captcha.reset();
+      if(error)authMsg=/rate limit/i.test(error.message)?"Too many sign-up emails were sent in the last hour — please try again later.":/already registered|exists/i.test(error.message)?"That email already has an account — sign in instead (or use “Forgot password?”).":error.message;
+      else if(data.session)authMsg="";
+      else if(data.user&&Array.isArray(data.user.identities)&&!data.user.identities.length)authMsg="That email already has an account — sign in instead (or use “Forgot password?”).";
+      else authMsg=`Almost there: we sent a confirmation link to ${email}. Open it on this device, then sign in. Check spam if it isn't there in a minute.`}
+    catch(err){authMsg="Couldn't reach the server — check the connection and try again. ("+(err&&err.message||err)+")"}
+    render()}
   else if(act==="forgot"){e.preventDefault();const email=($("#email")||{}).value;if(!email){authMsg="Type your email above first.";return render()}
     const cap=Captcha.token();if(cap===false){authMsg="Please complete the check above.";return render()}
     const {error}=await sb.auth.resetPasswordForEmail(email.trim(),{redirectTo:location.origin+location.pathname,captchaToken:cap||undefined});Captcha.reset();authMsg=error?error.message:"If that email has an account, a reset link is on its way.";render()}
@@ -553,7 +559,7 @@ document.addEventListener("click",async e=>{
 document.addEventListener("submit",async e=>{
   e.preventDefault();const id=e.target.id;
   if(id==="authForm"){const cap=Captcha.token();if(cap===false){authMsg="Please complete the check above.";return render()}
-    const {error}=await sb.auth.signInWithPassword({email:$("#email").value.trim(),password:$("#pw").value,options:{captchaToken:cap||undefined}});Captcha.reset();if(error){authMsg=error.message==="Invalid login credentials"?"Wrong email or password.":error.message;render()}}
+    const {error}=await sb.auth.signInWithPassword({email:$("#email").value.trim(),password:$("#pw").value,options:{captchaToken:cap||undefined}});Captcha.reset();if(error){authMsg=error.message==="Invalid login credentials"?"Wrong email or password.":/not confirmed/i.test(error.message)?"This email isn't confirmed yet — open the link we emailed you (check spam), then sign in.":error.message;render()}}
   else if(id==="userForm"){const u=$("#uname").value.trim().toLowerCase();const {error}=await sb.from("profiles").upsert({id:me,username:u});
     if(error){authMsg=error.code==="23505"?"That username is taken.":error.message;return render()}authMsg="";await startApp()}
   else if(id==="recForm"){const {error}=await sb.auth.updateUser({password:$("#newPw").value});if(error){authMsg=error.message;return render()}toast("Password updated");history.replaceState(null,"",location.pathname);await afterLogin()}
