@@ -166,6 +166,13 @@ def sync(days=None, quiet=True):
 
     def work():
         n = core.send(c["token"], entries)
+        if 0 < days <= 365:  # replace older copies for the re-sent days (e.g. after changing a subdeck's type)
+            try:
+                import datetime as _d
+                first = _d.date.fromisoformat(core.anki_day(core.since_ms(days), rollover())) + _d.timedelta(days=1)
+                core.prune(c["token"], first.isoformat(), [e["ext_id"] for e in entries])
+            except Exception as e:
+                print("Logbook prune:", e)
         if stats:
             try:
                 core.send_stats(c["token"], stats)
@@ -280,6 +287,10 @@ class Settings(QDialog):
             typ.addItems(typs + ([t_own] if t_own and t_own not in typs else []))
             if t_own:
                 typ.setCurrentText(t_own)
+            else:  # a subdeck that follows its parent starts with the parent's type
+                eff = core.rule_for(n, c["decks"])[1]
+                if eff and eff.get("type"):
+                    typ.setCurrentText(eff["type"])
             self.tree.setItemWidget(it, 1, subj); self.tree.setItemWidget(it, 2, typ)
             self.rows.append((n, subj, typ))
         # open the decks that have a subdeck with its own setting, so you can see it
@@ -334,6 +345,12 @@ class Settings(QDialog):
                 decks[n] = {"ignore": True}
             elif v and v not in (NOT_SET, SAME):
                 decks[n] = {"subject": v[:60], "type": (typ.currentText().strip() or "Mixed")[:40]}
+            elif v == SAME and "::" in n:
+                # same subject as the parent, but keep a different type (e.g. Grammaire → Grammar inside DALF C2)
+                parent_rule = core.rule_for(n.rsplit("::", 1)[0], decks)[1]
+                t = typ.currentText().strip()[:40]
+                if parent_rule and not parent_rule.get("ignore") and t and t != parent_rule.get("type"):
+                    decks[n] = {"type": t}
         c["decks"] = decks
         return c
 

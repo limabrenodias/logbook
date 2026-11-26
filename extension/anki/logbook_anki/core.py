@@ -22,13 +22,28 @@ def anki_day(ms: int, rollover: int) -> str:
 
 
 def rule_for(deck_name: str, mapping: dict):
-    """Find the setting for a deck: its own, or the closest parent deck's (A::B::C → A::B → A)."""
+    """The setting for a deck: its own, or the closest parent deck's (A::B::C → A::B → A).
+    A subdeck may set only its type ("same subject as parent"): the subject then comes from the nearest parent that has one."""
     parts = deck_name.split("::")
+    found_key, rule = None, None
     for i in range(len(parts), 0, -1):
         key = "::".join(parts[:i])
-        if key in mapping:
-            return key, mapping[key]
-    return None, None
+        r = mapping.get(key)
+        if not r:
+            continue
+        if r.get("ignore"):
+            return key, {"ignore": True}
+        if rule is None:
+            found_key, rule = key, dict(r)
+        if rule.get("subject"):
+            if not rule.get("type") and r.get("type"):
+                rule["type"] = r["type"]
+            return found_key, rule
+        if r.get("subject"):
+            rule["subject"] = r["subject"]
+            rule.setdefault("type", r.get("type"))
+            return found_key, rule
+    return (found_key, rule) if rule and rule.get("subject") else (None, None)
 
 
 def collect(rows, deck_names: dict, mapping: dict, rollover: int = 4):
@@ -49,9 +64,9 @@ def collect(rows, deck_names: dict, mapping: dict, rollover: int = 4):
         if rule.get("ignore"):
             continue
         day = anki_day(rid, rollover)
-        k = (day, key)
+        k = (day, name)                      # one log per deck you actually studied, with its full name
         sums[k] = sums.get(k, 0) + ms_spent
-        name_of[key] = rule
+        name_of[name] = rule
     entries = []
     for (day, key), ms in sorted(sums.items()):
         minutes = round(ms / 60000)
@@ -190,4 +205,15 @@ def sentence_html(sentence: str, word: str) -> str:
     if not w:
         return s
     return re.sub("(" + re.escape(w) + ")", r"<b>\1</b>", s, count=1, flags=re.IGNORECASE)
+
+
+def prune(token: str, since_day: str, keep: list):
+    """Remove this add-on's older logs from since_day on that weren't just re-sent (e.g. after changing a deck's setting).
+    Needs database update 8; silently skipped on older databases."""
+    try:
+        return _rpc("ingest_prune", {"p_token": token, "p_src": "anki", "p_from": since_day, "p_keep": keep})
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None
+        raise
 
